@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, formatDistanceToNow } from 'date-fns';
-import { Clock, CheckCircle, XCircle, Play } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Play, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Session {
@@ -69,7 +69,15 @@ export default function History() {
     return (
       <div className="min-h-screen pb-20 p-6">
         <div className="max-w-lg mx-auto">
-          <h1 className="text-2xl font-semibold mb-6">Past Sessions</h1>
+          <div className="flex items-center gap-3 mb-6">
+            <button
+              onClick={() => navigate('/')}
+              className="p-2 -ml-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-2xl font-semibold">Past Sessions</h1>
+          </div>
           <div className="text-muted-foreground">Loading...</div>
         </div>
       </div>
@@ -79,7 +87,15 @@ export default function History() {
   return (
     <div className="min-h-screen pb-20 p-6 animate-fade-in">
       <div className="max-w-lg mx-auto">
-        <h1 className="text-2xl font-semibold mb-6">Past Sessions</h1>
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => navigate('/')}
+            className="p-2 -ml-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h1 className="text-2xl font-semibold">Past Sessions</h1>
+        </div>
 
         {sessions.length === 0 ? (
           <div className="card-elevated p-8 text-center">
