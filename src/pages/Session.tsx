@@ -5,11 +5,18 @@ import { SystemShutdown } from '@/components/SystemShutdown';
 import { supabase } from '@/integrations/supabase/client';
 import { VentureId } from '@/types/empire';
 
+interface Task {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 interface SessionConfig {
   venture: VentureId;
   workType: string;
   focus: string;
   completionCondition: string;
+  initialTasks?: Task[];
 }
 
 export default function Session() {
@@ -120,6 +127,7 @@ export default function Session() {
             workType={sessionConfig.workType}
             focus={sessionConfig.focus}
             completionCondition={sessionConfig.completionCondition}
+            initialTasks={sessionConfig.initialTasks}
             onComplete={handleSessionComplete}
             onAbort={handleAbort}
           />

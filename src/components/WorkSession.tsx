@@ -14,21 +14,27 @@ interface WorkSessionProps {
   workType: string;
   focus: string;
   completionCondition: string;
+  initialTasks?: Task[];
   onComplete: (tasks: Task[]) => void;
   onAbort: () => void;
 }
 
-export function WorkSession({ venture, workType, focus, completionCondition, onComplete, onAbort }: WorkSessionProps) {
+export function WorkSession({ venture, workType, focus, completionCondition, initialTasks, onComplete, onAbort }: WorkSessionProps) {
   const ventureData = ventures.find(v => v.id === venture);
   
-  // Initialize tasks from default tasks for this work type
-  const initialTasks: Task[] = (defaultTasks[workType] || []).map((text, idx) => ({
-    id: `task-${idx}`,
-    text,
-    completed: false,
-  }));
+  // Use provided initialTasks if available, otherwise fall back to default tasks for this work type
+  const getInitialTasks = (): Task[] => {
+    if (initialTasks && initialTasks.length > 0) {
+      return initialTasks;
+    }
+    return (defaultTasks[workType] || []).map((text, idx) => ({
+      id: `task-${idx}`,
+      text,
+      completed: false,
+    }));
+  };
   
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>(getInitialTasks);
   const [newTaskText, setNewTaskText] = useState('');
   const [showAddTask, setShowAddTask] = useState(false);
 
