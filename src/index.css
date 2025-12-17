@@ -6,70 +6,63 @@
 
 @layer base {
   :root {
-    --background: 220 20% 6%;
-    --foreground: 210 20% 95%;
+    --background: 0 0% 100%;
+    --foreground: 220 20% 10%;
 
-    --card: 220 18% 10%;
-    --card-foreground: 210 20% 95%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 10%;
 
-    --popover: 220 18% 10%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 10%;
 
-    --primary: 45 100% 60%;
-    --primary-foreground: 220 20% 6%;
+    --primary: 220 70% 45%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 18%;
-    --secondary-foreground: 210 20% 85%;
+    --secondary: 220 15% 96%;
+    --secondary-foreground: 220 20% 25%;
 
-    --muted: 220 15% 15%;
-    --muted-foreground: 215 15% 55%;
+    --muted: 220 15% 96%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 180 70% 45%;
-    --accent-foreground: 220 20% 6%;
+    --accent: 180 60% 40%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 70% 55%;
-    --destructive-foreground: 210 20% 98%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 20%;
-    --input: 220 15% 18%;
-    --ring: 45 100% 60%;
+    --border: 220 15% 88%;
+    --input: 220 15% 92%;
+    --ring: 220 70% 45%;
 
     --radius: 0.5rem;
 
     /* Venture Colors */
-    --palmer-house: 12 80% 55%;
-    --palmer-house-glow: 12 100% 65%;
-    --besettld: 180 50% 45%;
-    --besettld-glow: 180 70% 55%;
-    --yourboy: 25 95% 55%;
-    --yourboy-glow: 25 100% 65%;
-    --strinzees: 280 70% 60%;
-    --strinzees-glow: 280 90% 70%;
+    --palmer-house: 12 75% 50%;
+    --palmer-house-glow: 12 90% 60%;
+    --besettld: 180 55% 40%;
+    --besettld-glow: 180 65% 50%;
+    --yourboy: 25 90% 50%;
+    --yourboy-glow: 25 95% 60%;
+    --strinzees: 280 65% 55%;
+    --strinzees-glow: 280 80% 65%;
 
     /* Status Colors */
-    --status-active: 145 70% 45%;
-    --status-warning: 45 100% 55%;
-    --status-offline: 0 0% 45%;
+    --status-active: 145 65% 40%;
+    --status-warning: 40 95% 50%;
+    --status-offline: 0 0% 55%;
 
-    /* Cockpit Effects */
-    --glow-primary: 0 0 30px hsl(45 100% 60% / 0.3);
-    --glow-accent: 0 0 20px hsl(180 70% 45% / 0.3);
-    --cockpit-grid: linear-gradient(hsl(220 15% 12% / 0.8) 1px, transparent 1px),
-                    linear-gradient(90deg, hsl(220 15% 12% / 0.8) 1px, transparent 1px);
+    /* Clean Effects */
+    --glow-primary: 0 4px 20px hsl(220 70% 45% / 0.15);
+    --glow-accent: 0 4px 16px hsl(180 60% 40% / 0.15);
 
-    --sidebar-background: 220 18% 8%;
-    --sidebar-foreground: 210 20% 85%;
-    --sidebar-primary: 45 100% 60%;
-    --sidebar-primary-foreground: 220 20% 6%;
-    --sidebar-accent: 220 15% 15%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 220 15% 18%;
-    --sidebar-ring: 45 100% 60%;
-  }
-
-  .dark {
-    --background: 220 20% 6%;
-    --foreground: 210 20% 95%;
+    --sidebar-background: 220 15% 97%;
+    --sidebar-foreground: 220 20% 25%;
+    --sidebar-primary: 220 70% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 94%;
+    --sidebar-accent-foreground: 220 20% 15%;
+    --sidebar-border: 220 15% 90%;
+    --sidebar-ring: 220 70% 45%;
   }
 }
 
@@ -80,8 +73,6 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    background-image: var(--cockpit-grid);
-    background-size: 40px 40px;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -91,13 +82,14 @@
 
 @layer components {
   .cockpit-panel {
-    @apply bg-card/80 backdrop-blur-sm border border-border rounded-lg;
-    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.05),
-                0 4px 20px hsl(0 0% 0% / 0.3);
+    @apply bg-card border border-border rounded-lg;
+    box-shadow: 0 1px 3px hsl(0 0% 0% / 0.05),
+                0 4px 20px hsl(0 0% 0% / 0.03);
   }
 
   .cockpit-glow {
     box-shadow: var(--glow-primary);
+    @apply bg-primary/5;
   }
 
   .status-indicator {
@@ -110,9 +102,7 @@
   }
 
   .venture-card:hover {
-    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.05),
-                0 8px 30px hsl(0 0% 0% / 0.4),
-                var(--glow-primary);
+    box-shadow: 0 8px 30px hsl(0 0% 0% / 0.08);
   }
 
   .stage-indicator {
@@ -129,7 +119,7 @@
     @apply px-6 py-3 rounded-md font-mono text-sm font-bold uppercase tracking-wider;
     @apply bg-primary text-primary-foreground;
     @apply hover:brightness-110;
-    box-shadow: var(--glow-primary);
+    box-shadow: 0 4px 14px hsl(var(--primary) / 0.3);
   }
 }
 
