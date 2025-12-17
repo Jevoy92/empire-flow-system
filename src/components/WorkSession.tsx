@@ -74,7 +74,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, onC
   const isStageAvailable = (stageId: number) => stageId <= currentStage;
 
   return (
-    <div className="cockpit-panel p-8 max-w-3xl mx-auto">
+    <div className="panel p-8 max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-8 pb-6 border-b border-border">
         <div>
@@ -85,14 +85,14 @@ export function WorkSession({ venture, workType, focus, completionCondition, onC
         </div>
         <button
           onClick={onAbort}
-          className="btn-cockpit text-destructive border-destructive/30 hover:bg-destructive hover:text-destructive-foreground"
+          className="btn-secondary text-destructive border-destructive/30 hover:bg-destructive hover:text-destructive-foreground"
         >
           <Square className="w-4 h-4 mr-2 inline" />
           Abort Session
         </button>
       </div>
 
-      {/* Mission Parameters */}
+      {/* Task Details */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="p-4 rounded-lg bg-secondary/50">
           <div className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-1">Focus</div>
@@ -148,7 +148,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, onC
                 {isAvailable && !isComplete && (
                   <button
                     onClick={() => handleStageComplete(stage.id)}
-                    className="btn-cockpit"
+                    className="btn-secondary"
                   >
                     <Circle className="w-4 h-4 mr-2 inline" />
                     Complete
@@ -167,9 +167,9 @@ export function WorkSession({ venture, workType, focus, completionCondition, onC
       {/* Complete Session */}
       {completedStages.length === 5 && (
         <div className="mt-8 pt-6 border-t border-border text-center animate-fade-in">
-          <p className="text-lg font-display text-primary mb-4">Mission Complete</p>
-          <button onClick={onComplete} className="btn-launch">
-            System Shutdown
+          <p className="text-lg font-display text-primary mb-4">Session Complete</p>
+          <button onClick={onComplete} className="btn-primary">
+            End Session
           </button>
         </div>
       )}

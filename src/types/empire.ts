@@ -28,7 +28,7 @@ export interface WorkSession {
 export interface DailyState {
   date: string;
   energyLevel: EnergyLevel;
-  preFlightComplete: boolean;
+  setupComplete: boolean;
   activeSession?: WorkSession;
   sessionsCompleted: number;
 }
