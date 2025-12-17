@@ -2,67 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 220 20% 10%;
+    --background: 220 20% 97%;
+    --foreground: 220 20% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 220 20% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 220 20% 15%;
 
-    --primary: 220 70% 45%;
+    --primary: 248 85% 65%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 96%;
-    --secondary-foreground: 220 20% 25%;
+    --secondary: 220 15% 94%;
+    --secondary-foreground: 220 20% 35%;
 
-    --muted: 220 15% 96%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 10% 50%;
 
-    --accent: 180 60% 40%;
+    --accent: 248 70% 60%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 70% 50%;
+    --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 88%;
-    --input: 220 15% 92%;
-    --ring: 220 70% 45%;
+    --border: 220 15% 90%;
+    --input: 220 15% 94%;
+    --ring: 248 85% 65%;
 
-    --radius: 0.5rem;
-
-    /* Venture Colors */
-    --palmer-house: 12 75% 50%;
-    --palmer-house-glow: 12 90% 60%;
-    --besettld: 180 55% 40%;
-    --besettld-glow: 180 65% 50%;
-    --yourboy: 25 90% 50%;
-    --yourboy-glow: 25 95% 60%;
-    --strinzees: 280 65% 55%;
-    --strinzees-glow: 280 80% 65%;
+    --radius: 0.75rem;
 
     /* Status Colors */
-    --status-active: 145 65% 40%;
+    --status-active: 145 65% 45%;
     --status-warning: 40 95% 50%;
     --status-offline: 0 0% 55%;
 
-    /* Clean Effects */
-    --glow-primary: 0 4px 20px hsl(220 70% 45% / 0.15);
-    --glow-accent: 0 4px 16px hsl(180 60% 40% / 0.15);
+    /* Session Colors */
+    --session-warm: 35 100% 97%;
 
     --sidebar-background: 220 15% 97%;
     --sidebar-foreground: 220 20% 25%;
-    --sidebar-primary: 220 70% 45%;
+    --sidebar-primary: 248 85% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 15% 94%;
     --sidebar-accent-foreground: 220 20% 15%;
     --sidebar-border: 220 15% 90%;
-    --sidebar-ring: 220 70% 45%;
+    --sidebar-ring: 248 85% 65%;
   }
 }
 
@@ -76,76 +65,100 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display;
+    @apply font-sans font-semibold;
   }
 }
 
 @layer components {
-  .panel {
-    @apply bg-card border border-border rounded-lg;
-    box-shadow: 0 1px 3px hsl(0 0% 0% / 0.05),
-                0 4px 20px hsl(0 0% 0% / 0.03);
-  }
-
-  .highlight {
-    box-shadow: var(--glow-primary);
-    @apply bg-primary/5;
-  }
-
-  .status-indicator {
-    @apply w-2 h-2 rounded-full;
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-
-  .venture-card {
-    @apply panel p-6 transition-all duration-300 hover:scale-[1.02];
-  }
-
-  .venture-card:hover {
-    box-shadow: 0 8px 30px hsl(0 0% 0% / 0.08);
-  }
-
-  .stage-indicator {
-    @apply px-3 py-1 rounded-full text-xs font-mono font-medium uppercase tracking-wider;
-  }
-
-  .btn-secondary {
-    @apply px-4 py-2 rounded-md font-mono text-sm font-medium transition-all duration-200;
-    @apply bg-secondary text-secondary-foreground border border-border;
-    @apply hover:bg-primary hover:text-primary-foreground hover:border-primary;
+  .card-elevated {
+    @apply bg-card rounded-xl;
+    box-shadow: 0 1px 3px hsl(0 0% 0% / 0.06),
+                0 4px 16px hsl(0 0% 0% / 0.04);
   }
 
   .btn-primary {
-    @apply px-6 py-3 rounded-md font-mono text-sm font-bold uppercase tracking-wider;
+    @apply px-6 py-3 rounded-xl font-medium text-base;
     @apply bg-primary text-primary-foreground;
-    @apply hover:brightness-110;
-    box-shadow: 0 4px 14px hsl(var(--primary) / 0.3);
+    @apply hover:brightness-105 active:brightness-95;
+    @apply transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg font-medium text-sm;
+    @apply bg-secondary text-secondary-foreground;
+    @apply hover:bg-muted;
+    @apply transition-all duration-200;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 rounded-lg font-medium text-sm;
+    @apply text-muted-foreground;
+    @apply hover:bg-secondary hover:text-foreground;
+    @apply transition-all duration-200;
+  }
+
+  .checklist-item {
+    @apply w-full p-5 rounded-xl text-left transition-all flex items-center gap-4;
+    @apply bg-card border border-border;
+    @apply hover:border-primary/30;
+  }
+
+  .checklist-item.completed {
+    @apply border-status-active/30 bg-status-active/5;
+  }
+
+  .check-circle {
+    @apply w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0;
+    @apply border-border;
+    @apply transition-all duration-200;
+  }
+
+  .check-circle.checked {
+    @apply bg-primary border-primary;
+  }
+
+  .input-field {
+    @apply w-full p-4 rounded-xl bg-card border border-border;
+    @apply focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+    @apply text-base placeholder:text-muted-foreground;
+    @apply transition-all duration-200;
+  }
+
+  .progress-segment {
+    @apply h-1.5 flex-1 rounded-full transition-colors duration-300;
+    @apply bg-border;
+  }
+
+  .progress-segment.active {
+    @apply bg-primary;
+  }
+
+  .progress-segment.complete {
+    @apply bg-primary;
+  }
+
+  .stage-number {
+    @apply w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium;
+    @apply bg-secondary text-muted-foreground;
+    @apply transition-all duration-200;
+  }
+
+  .stage-number.active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .stage-number.complete {
+    @apply bg-status-active text-white;
   }
 }
 
 @layer utilities {
-  .font-display {
-    font-family: 'JetBrains Mono', monospace;
-  }
-
-  .font-sans {
-    font-family: 'Inter', sans-serif;
-  }
-
-  .text-glow {
-    text-shadow: 0 0 20px currentColor;
-  }
-
   .animate-fade-in {
-    animation: fadeIn 0.5s ease-out forwards;
+    animation: fadeIn 0.4s ease-out forwards;
   }
 
   .animate-slide-up {
-    animation: slideUp 0.5s ease-out forwards;
-  }
-
-  .animate-pulse-slow {
-    animation: pulse-glow 3s ease-in-out infinite;
+    animation: slideUp 0.4s ease-out forwards;
   }
 }
 
@@ -157,15 +170,10 @@
 @keyframes slideUp {
   from { 
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px);
   }
   to { 
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
 }
