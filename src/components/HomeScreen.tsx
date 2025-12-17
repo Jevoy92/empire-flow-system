@@ -1,4 +1,4 @@
-import { Play } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 interface HomeScreenProps {
   onStartSession: () => void;
@@ -20,12 +20,8 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
             onClick={onStartSession}
             className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-3"
           >
-            <Play className="w-5 h-5" />
             Start a Work Session
-          </button>
-          
-          <button className="btn-ghost mt-6 text-sm">
-            Review previous sessions
+            <ArrowRight className="w-5 h-5" />
           </button>
         </div>
       </div>
