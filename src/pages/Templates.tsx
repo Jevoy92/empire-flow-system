@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Layout, Play, Trash2, Plus, Pencil, Folder } from 'lucide-react';
+import { Layout, Play, Trash2, Plus, Pencil, Folder, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { TemplateEditModal } from '@/components/TemplateEditModal';
 import { categories, getCategoryById } from '@/data/ventures';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Template {
   id: string;
@@ -216,73 +217,81 @@ export default function Templates() {
               const categoryTemplates = groupedTemplates[categoryId];
               
               return (
-                <div key={categoryId}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Folder className="w-4 h-4 text-muted-foreground" />
-                    <h2 className="text-sm font-medium text-muted-foreground">
-                      {categoryData?.name || categoryId}
-                      {categoryData?.type === 'personal' && (
-                        <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent">
-                          Personal
-                        </span>
-                      )}
-                    </h2>
-                  </div>
+                <Collapsible key={categoryId} defaultOpen={categoryTemplates.length <= 5}>
+                  <CollapsibleTrigger className="w-full">
+                    <div className="flex items-center gap-2 mb-3 hover:bg-secondary/50 rounded-lg px-2 py-1 -mx-2 transition-colors cursor-pointer group">
+                      <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+                      <Folder className="w-4 h-4 text-muted-foreground" />
+                      <h2 className="text-sm font-medium text-muted-foreground flex-1 text-left">
+                        {categoryData?.name || categoryId}
+                        {categoryData?.type === 'personal' && (
+                          <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent">
+                            Personal
+                          </span>
+                        )}
+                      </h2>
+                      <span className="text-xs text-muted-foreground/60">
+                        {categoryTemplates.length}
+                      </span>
+                    </div>
+                  </CollapsibleTrigger>
                   
-                  <div className="space-y-2">
-                    {categoryTemplates.map((template) => (
-                      <div
-                        key={template.id}
-                        className="card-elevated p-4"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-foreground mb-1 truncate">{template.name}</h3>
-                            <div className="text-sm text-muted-foreground">
-                              {template.work_type}
+                  <CollapsibleContent>
+                    <div className="space-y-2 mb-4">
+                      {categoryTemplates.map((template) => (
+                        <div
+                          key={template.id}
+                          className="card-elevated p-4"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-medium text-foreground mb-1 truncate">{template.name}</h3>
+                              <div className="text-sm text-muted-foreground">
+                                {template.work_type}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 ml-2">
+                              <button
+                                onClick={() => useTemplate(template)}
+                                className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-primary transition-colors"
+                                title="Use template"
+                              >
+                                <Play className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleEditClick(template)}
+                                className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                                title="Edit template"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteTemplate(template.id)}
+                                className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                title="Delete template"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 ml-2">
-                            <button
-                              onClick={() => useTemplate(template)}
-                              className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-primary transition-colors"
-                              title="Use template"
-                            >
-                              <Play className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleEditClick(template)}
-                              className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                              title="Edit template"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => deleteTemplate(template.id)}
-                              className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                              title="Delete template"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            {template.use_ai_tasks ? (
+                              <span className="text-primary">AI tasks</span>
+                            ) : (
+                              <span>{template.default_tasks.length} preset tasks</span>
+                            )}
+                            {template.last_used_at && (
+                              <span>
+                                Used {formatDistanceToNow(new Date(template.last_used_at), { addSuffix: true })}
+                              </span>
+                            )}
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          {template.use_ai_tasks ? (
-                            <span className="text-primary">AI tasks</span>
-                          ) : (
-                            <span>{template.default_tasks.length} preset tasks</span>
-                          )}
-                          {template.last_used_at && (
-                            <span>
-                              Used {formatDistanceToNow(new Date(template.last_used_at), { addSuffix: true })}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               );
             })}
           </div>
