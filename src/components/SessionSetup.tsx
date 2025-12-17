@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { EnergyLevel, VentureId } from '@/types/empire';
 import { ventures, workTypes } from '@/data/ventures';
-import { Rocket, Battery, BatteryLow, BatteryMedium, BatteryFull, ChevronRight, Target, CheckCircle2 } from 'lucide-react';
+import { ClipboardCheck, Battery, BatteryLow, BatteryMedium, BatteryFull, ChevronRight, Target, CheckCircle2, X } from 'lucide-react';
 
-interface FlightLaunchpadProps {
+interface SessionSetupProps {
   onLaunch: (config: {
     energy: EnergyLevel;
     venture: VentureId;
@@ -11,16 +11,17 @@ interface FlightLaunchpadProps {
     focus: string;
     completionCondition: string;
   }) => void;
+  onCancel: () => void;
 }
 
 const energyLevels: { value: EnergyLevel; label: string; icon: React.ElementType; description: string }[] = [
-  { value: 'high', label: 'High Altitude', icon: BatteryFull, description: 'Ready for deep work' },
-  { value: 'medium', label: 'Cruising', icon: BatteryMedium, description: 'Standard operations' },
-  { value: 'low', label: 'Low Fuel', icon: BatteryLow, description: 'Light tasks only' },
-  { value: 'depleted', label: 'Grounded', icon: Battery, description: 'Admin or rest' },
+  { value: 'high', label: 'High', icon: BatteryFull, description: 'Ready for deep work' },
+  { value: 'medium', label: 'Medium', icon: BatteryMedium, description: 'Standard tasks' },
+  { value: 'low', label: 'Low', icon: BatteryLow, description: 'Light tasks only' },
+  { value: 'depleted', label: 'Depleted', icon: Battery, description: 'Admin or rest' },
 ];
 
-export function FlightLaunchpad({ onLaunch }: FlightLaunchpadProps) {
+export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
   const [step, setStep] = useState(1);
   const [energy, setEnergy] = useState<EnergyLevel | null>(null);
   const [venture, setVenture] = useState<VentureId | null>(null);
@@ -47,15 +48,24 @@ export function FlightLaunchpad({ onLaunch }: FlightLaunchpadProps) {
   };
 
   return (
-    <div className="cockpit-panel p-8 max-w-2xl mx-auto">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-2 rounded-lg bg-primary/10">
-          <Rocket className="w-6 h-6 text-primary" />
+    <div className="panel p-8 max-w-2xl mx-auto">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <ClipboardCheck className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-display font-bold">Start Work Session</h2>
+            <p className="text-sm text-muted-foreground">Set up your session</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-display font-bold">Flight Launchpad</h2>
-          <p className="text-sm text-muted-foreground">Pre-flight sequence initiated</p>
-        </div>
+        <button
+          onClick={onCancel}
+          className="p-2 rounded-lg hover:bg-secondary transition-colors"
+          aria-label="Cancel"
+        >
+          <X className="w-5 h-5 text-muted-foreground" />
+        </button>
       </div>
 
       {/* Progress Bar */}
@@ -75,7 +85,7 @@ export function FlightLaunchpad({ onLaunch }: FlightLaunchpadProps) {
       {/* Step 1: Energy Check */}
       {step === 1 && (
         <div className="animate-fade-in">
-          <h3 className="text-lg font-display mb-2">Flight Check #1: Engine Status</h3>
+          <h3 className="text-lg font-display mb-2">Step 1: Energy Check</h3>
           <p className="text-muted-foreground mb-6">How are your energy levels today?</p>
           
           <div className="grid grid-cols-2 gap-3">
@@ -101,8 +111,8 @@ export function FlightLaunchpad({ onLaunch }: FlightLaunchpadProps) {
       {/* Step 2: Venture Selection */}
       {step === 2 && (
         <div className="animate-fade-in">
-          <h3 className="text-lg font-display mb-2">Flight Check #2: Domain Entry</h3>
-          <p className="text-muted-foreground mb-6">Which venture are you entering?</p>
+          <h3 className="text-lg font-display mb-2">Step 2: Select Venture</h3>
+          <p className="text-muted-foreground mb-6">Which venture are you working on?</p>
           
           <div className="grid grid-cols-2 gap-3">
             {ventures.map((v) => (
@@ -126,7 +136,7 @@ export function FlightLaunchpad({ onLaunch }: FlightLaunchpadProps) {
       {/* Step 3: Work Type */}
       {step === 3 && (
         <div className="animate-fade-in">
-          <h3 className="text-lg font-display mb-2">Flight Check #3: Mission Type</h3>
+          <h3 className="text-lg font-display mb-2">Step 3: Work Type</h3>
           <p className="text-muted-foreground mb-6">What type of work are you doing?</p>
           
           <div className="grid grid-cols-2 gap-3">
@@ -150,8 +160,8 @@ export function FlightLaunchpad({ onLaunch }: FlightLaunchpadProps) {
       {/* Step 4: Define Focus */}
       {step === 4 && (
         <div className="animate-fade-in">
-          <h3 className="text-lg font-display mb-2">Flight Check #4: Set Coordinates</h3>
-          <p className="text-muted-foreground mb-6">Define your mission parameters.</p>
+          <h3 className="text-lg font-display mb-2">Step 4: Define Task</h3>
+          <p className="text-muted-foreground mb-6">Define what you will accomplish.</p>
           
           <div className="space-y-4">
             <div>
@@ -189,19 +199,24 @@ export function FlightLaunchpad({ onLaunch }: FlightLaunchpadProps) {
         {step > 1 ? (
           <button
             onClick={() => setStep(step - 1)}
-            className="btn-cockpit"
+            className="btn-secondary"
           >
             Back
           </button>
         ) : (
-          <div />
+          <button
+            onClick={onCancel}
+            className="btn-secondary"
+          >
+            Cancel
+          </button>
         )}
         <button
           onClick={handleNext}
           disabled={!canProceed()}
-          className="btn-launch disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {step === 4 ? 'Clearance for Takeoff' : 'Continue'}
+          {step === 4 ? 'Start Session' : 'Continue'}
         </button>
       </div>
     </div>

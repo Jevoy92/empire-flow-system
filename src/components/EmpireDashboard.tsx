@@ -1,6 +1,6 @@
 import { ventures } from '@/data/ventures';
 import { VentureCard } from './VentureCard';
-import { Crown, Zap, Calendar, TrendingUp } from 'lucide-react';
+import { Crown, Play, Calendar, TrendingUp } from 'lucide-react';
 
 interface EmpireDashboardProps {
   onStartSession: () => void;
@@ -24,7 +24,7 @@ export function EmpireDashboard({ onStartSession }: EmpireDashboardProps) {
         {/* Header */}
         <header className="mb-12 animate-slide-up">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-primary/10 cockpit-glow">
+            <div className="p-2 rounded-lg bg-primary/10 highlight">
               <Crown className="w-6 h-6 text-primary" />
             </div>
             <span className="text-sm font-mono text-muted-foreground">{today}</span>
@@ -39,16 +39,16 @@ export function EmpireDashboard({ onStartSession }: EmpireDashboardProps) {
 
         {/* Stats Bar */}
         <div className="grid grid-cols-3 gap-4 mb-8 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-          <div className="cockpit-panel p-4 flex items-center gap-4">
+          <div className="panel p-4 flex items-center gap-4">
             <div className="p-2 rounded-lg bg-accent/20">
-              <Zap className="w-5 h-5 text-accent" />
+              <TrendingUp className="w-5 h-5 text-accent" />
             </div>
             <div>
               <div className="text-2xl font-display font-bold">{activeVentures}</div>
               <div className="text-sm text-muted-foreground">Active Ventures</div>
             </div>
           </div>
-          <div className="cockpit-panel p-4 flex items-center gap-4">
+          <div className="panel p-4 flex items-center gap-4">
             <div className="p-2 rounded-lg bg-primary/20">
               <Calendar className="w-5 h-5 text-primary" />
             </div>
@@ -57,7 +57,7 @@ export function EmpireDashboard({ onStartSession }: EmpireDashboardProps) {
               <div className="text-sm text-muted-foreground">Active Projects</div>
             </div>
           </div>
-          <div className="cockpit-panel p-4 flex items-center gap-4">
+          <div className="panel p-4 flex items-center gap-4">
             <div className="p-2 rounded-lg bg-status-warning/20">
               <TrendingUp className="w-5 h-5 text-status-warning" />
             </div>
@@ -72,10 +72,10 @@ export function EmpireDashboard({ onStartSession }: EmpireDashboardProps) {
         <div className="mb-8 animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <button
             onClick={onStartSession}
-            className="w-full btn-launch py-6 text-lg flex items-center justify-center gap-3"
+            className="w-full btn-primary py-6 text-lg flex items-center justify-center gap-3"
           >
-            <Zap className="w-6 h-6" />
-            Initiate Pre-Flight Sequence
+            <Play className="w-6 h-6" />
+            Start Work Session
           </button>
         </div>
 

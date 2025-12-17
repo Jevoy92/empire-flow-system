@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Moon, CheckCircle2, Circle, Calendar, Trash2, Power } from 'lucide-react';
+import { Moon, CheckCircle2, Circle, Power } from 'lucide-react';
 
 interface SystemShutdownProps {
   onComplete: () => void;
@@ -26,13 +26,13 @@ export function SystemShutdown({ onComplete }: SystemShutdownProps) {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-8">
-      <div className="cockpit-panel p-8 max-w-lg w-full animate-fade-in">
+      <div className="panel p-8 max-w-lg w-full animate-fade-in">
         <div className="text-center mb-8">
           <div className="inline-flex p-4 rounded-full bg-primary/10 mb-4">
             <Moon className="w-10 h-10 text-primary" />
           </div>
-          <h2 className="text-2xl font-display font-bold mb-2">System Shutdown</h2>
-          <p className="text-muted-foreground">Complete the shutdown sequence to end your day.</p>
+          <h2 className="text-2xl font-display font-bold mb-2">End of Day</h2>
+          <p className="text-muted-foreground">Complete the checklist to close out your day.</p>
         </div>
 
         <div className="space-y-3 mb-8">
@@ -63,10 +63,10 @@ export function SystemShutdown({ onComplete }: SystemShutdownProps) {
           <div className="animate-fade-in">
             <button
               onClick={onComplete}
-              className="w-full btn-launch py-4 flex items-center justify-center gap-2"
+              className="w-full btn-primary py-4 flex items-center justify-center gap-2"
             >
               <Power className="w-5 h-5" />
-              System Offline
+              Done for Today
             </button>
             <p className="text-center text-muted-foreground text-sm mt-4">
               Enjoy your evening, Jevoy.

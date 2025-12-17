@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { EmpireDashboard } from '@/components/EmpireDashboard';
-import { FlightLaunchpad } from '@/components/FlightLaunchpad';
+import { SessionSetup } from '@/components/SessionSetup';
 import { WorkSession } from '@/components/WorkSession';
 import { SystemShutdown } from '@/components/SystemShutdown';
 import { VentureId, EnergyLevel } from '@/types/empire';
 
-type AppView = 'dashboard' | 'launchpad' | 'session' | 'shutdown';
+type AppView = 'dashboard' | 'setup' | 'session' | 'shutdown';
 
 interface SessionConfig {
   energy: EnergyLevel;
@@ -33,7 +33,7 @@ const Index = () => {
     setView('dashboard');
   };
 
-  const handleAbort = () => {
+  const handleCancel = () => {
     setSessionConfig(null);
     setView('dashboard');
   };
@@ -41,12 +41,12 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {view === 'dashboard' && (
-        <EmpireDashboard onStartSession={() => setView('launchpad')} />
+        <EmpireDashboard onStartSession={() => setView('setup')} />
       )}
 
-      {view === 'launchpad' && (
+      {view === 'setup' && (
         <div className="min-h-screen flex items-center justify-center p-8">
-          <FlightLaunchpad onLaunch={handleLaunch} />
+          <SessionSetup onLaunch={handleLaunch} onCancel={handleCancel} />
         </div>
       )}
 
@@ -58,7 +58,7 @@ const Index = () => {
             focus={sessionConfig.focus}
             completionCondition={sessionConfig.completionCondition}
             onComplete={handleSessionComplete}
-            onAbort={handleAbort}
+            onAbort={handleCancel}
           />
         </div>
       )}
