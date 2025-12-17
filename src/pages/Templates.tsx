@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Layout, Play, Trash2, Plus, Pencil, Folder, ChevronDown } from 'lucide-react';
+import { Layout, Play, Trash2, Plus, Pencil, Folder, ChevronDown, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { TemplateEditModal } from '@/components/TemplateEditModal';
@@ -175,7 +175,15 @@ export default function Templates() {
     return (
       <div className="min-h-screen pb-20 p-6">
         <div className="max-w-lg mx-auto">
-          <h1 className="text-2xl font-semibold mb-6">Templates</h1>
+          <div className="flex items-center gap-3 mb-6">
+            <button
+              onClick={() => navigate('/')}
+              className="p-2 -ml-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-2xl font-semibold">Templates</h1>
+          </div>
           <div className="text-muted-foreground">Loading...</div>
         </div>
       </div>
@@ -186,7 +194,15 @@ export default function Templates() {
     <div className="min-h-screen pb-20 p-6 animate-fade-in">
       <div className="max-w-lg mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold">Templates</h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/')}
+              className="p-2 -ml-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-2xl font-semibold">Templates</h1>
+          </div>
           <button
             onClick={handleCreateClick}
             className="btn-primary flex items-center gap-2 px-4 py-2"
