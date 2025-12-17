@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X, Save } from 'lucide-react';
 
 interface SystemShutdownProps {
   onComplete: () => void;
   onPlanNext?: () => void;
+  onSaveAsTemplate?: (name: string) => void;
 }
 
 const shutdownChecklist = [
@@ -12,9 +13,12 @@ const shutdownChecklist = [
   { id: 3, label: 'Status logged or updated' },
 ];
 
-export function SystemShutdown({ onComplete, onPlanNext }: SystemShutdownProps) {
+export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate }: SystemShutdownProps) {
   const [completedItems, setCompletedItems] = useState<number[]>([]);
   const [nextNote, setNextNote] = useState('');
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [saved, setSaved] = useState(false);
 
   const toggleItem = (id: number) => {
     setCompletedItems(prev =>
@@ -23,6 +27,14 @@ export function SystemShutdown({ onComplete, onPlanNext }: SystemShutdownProps) 
   };
 
   const allComplete = completedItems.length === shutdownChecklist.length;
+
+  const handleSaveTemplate = () => {
+    if (templateName.trim() && onSaveAsTemplate) {
+      onSaveAsTemplate(templateName.trim());
+      setSaved(true);
+      setShowSaveTemplate(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-8" style={{ backgroundColor: 'hsl(var(--session-warm))' }}>
@@ -66,6 +78,42 @@ export function SystemShutdown({ onComplete, onPlanNext }: SystemShutdownProps) 
               maxLength={100}
             />
           </div>
+
+          {/* Save as Template */}
+          {onSaveAsTemplate && !saved && (
+            <div className="mb-6">
+              {showSaveTemplate ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="Template name..."
+                    className="input-field flex-1"
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveTemplate()}
+                  />
+                  <button onClick={handleSaveTemplate} className="btn-primary px-4 py-3">
+                    Save
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSaveTemplate(true)}
+                  className="btn-ghost w-full flex items-center justify-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  Save as template
+                </button>
+              )}
+            </div>
+          )}
+
+          {saved && (
+            <div className="mb-6 p-3 rounded-lg bg-status-active/10 text-status-active text-sm text-center">
+              Template saved!
+            </div>
+          )}
 
           {/* Complete Section */}
           {allComplete && (

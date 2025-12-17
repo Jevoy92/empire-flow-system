@@ -14,7 +14,7 @@ interface WorkSessionProps {
   workType: string;
   focus: string;
   completionCondition: string;
-  onComplete: () => void;
+  onComplete: (tasks: Task[]) => void;
   onAbort: () => void;
 }
 
@@ -66,6 +66,10 @@ export function WorkSession({ venture, workType, focus, completionCondition, onC
     }
   };
 
+  const handleComplete = () => {
+    onComplete(tasks);
+  };
+
   return (
     <div className="w-full max-w-lg animate-fade-in">
       {/* Progress Bar */}
@@ -108,7 +112,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, onC
                 key={task.id}
                 className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
                   task.completed 
-                    ? 'bg-success/5 border-success/20' 
+                    ? 'bg-status-active/5 border-status-active/20' 
                     : 'bg-background border-border hover:border-primary/30'
                 }`}
               >
@@ -116,7 +120,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, onC
                   onClick={() => toggleTask(task.id)}
                   className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                     task.completed
-                      ? 'bg-success border-success text-white'
+                      ? 'bg-status-active border-status-active text-primary-foreground'
                       : 'border-muted-foreground/30 hover:border-primary'
                   }`}
                 >
@@ -127,8 +131,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, onC
                 </span>
                 <button
                   onClick={() => removeTask(task.id)}
-                  className="p-1 rounded hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                  style={{ opacity: 1 }}
+                  className="p-1 rounded hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive transition-colors"
                   aria-label="Remove task"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -183,7 +186,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, onC
               Done when: <span className="text-foreground">{completionCondition}</span>
             </div>
             <button
-              onClick={onComplete}
+              onClick={handleComplete}
               className="btn-primary px-6 py-2"
             >
               Wrap Up

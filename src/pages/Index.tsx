@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { HomeScreen } from '@/components/HomeScreen';
 import { SessionSetup } from '@/components/SessionSetup';
-import { WorkSession } from '@/components/WorkSession';
-import { SystemShutdown } from '@/components/SystemShutdown';
 import { VentureId, EnergyLevel } from '@/types/empire';
 
-type AppView = 'home' | 'setup' | 'session' | 'shutdown';
+type AppView = 'home' | 'setup';
 
 interface SessionConfig {
   energy: EnergyLevel;
@@ -17,29 +16,25 @@ interface SessionConfig {
 
 const Index = () => {
   const [view, setView] = useState<AppView>('home');
-  const [sessionConfig, setSessionConfig] = useState<SessionConfig | null>(null);
+  const navigate = useNavigate();
+
+  // Check for prefill data from templates or history
+  useEffect(() => {
+    const prefill = sessionStorage.getItem('prefill');
+    if (prefill) {
+      setView('setup');
+    }
+  }, []);
 
   const handleLaunch = (config: SessionConfig) => {
-    setSessionConfig(config);
-    setView('session');
-  };
-
-  const handleSessionComplete = () => {
-    setView('shutdown');
-  };
-
-  const handleShutdownComplete = () => {
-    setSessionConfig(null);
-    setView('home');
-  };
-
-  const handlePlanNext = () => {
-    setSessionConfig(null);
-    setView('setup');
+    // Clear any prefill data
+    sessionStorage.removeItem('prefill');
+    // Navigate to session page with config
+    navigate('/session', { state: config });
   };
 
   const handleCancel = () => {
-    setSessionConfig(null);
+    sessionStorage.removeItem('prefill');
     setView('home');
   };
 
@@ -50,29 +45,9 @@ const Index = () => {
       )}
 
       {view === 'setup' && (
-        <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="min-h-screen flex items-center justify-center p-8 pb-24">
           <SessionSetup onLaunch={handleLaunch} onCancel={handleCancel} />
         </div>
-      )}
-
-      {view === 'session' && sessionConfig && (
-        <div className="min-h-screen flex items-center justify-center p-8">
-          <WorkSession
-            venture={sessionConfig.venture}
-            workType={sessionConfig.workType}
-            focus={sessionConfig.focus}
-            completionCondition={sessionConfig.completionCondition}
-            onComplete={handleSessionComplete}
-            onAbort={handleCancel}
-          />
-        </div>
-      )}
-
-      {view === 'shutdown' && (
-        <SystemShutdown 
-          onComplete={handleShutdownComplete}
-          onPlanNext={handlePlanNext}
-        />
       )}
     </div>
   );
