@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { EnergyLevel, VentureId } from '@/types/empire';
 import { ventures, workTypes } from '@/data/ventures';
-import { ClipboardCheck, Battery, BatteryLow, BatteryMedium, BatteryFull, ChevronRight, Target, CheckCircle2, X } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 
 interface SessionSetupProps {
   onLaunch: (config: {
@@ -14,210 +14,236 @@ interface SessionSetupProps {
   onCancel: () => void;
 }
 
-const energyLevels: { value: EnergyLevel; label: string; icon: React.ElementType; description: string }[] = [
-  { value: 'high', label: 'High', icon: BatteryFull, description: 'Ready for deep work' },
-  { value: 'medium', label: 'Medium', icon: BatteryMedium, description: 'Standard tasks' },
-  { value: 'low', label: 'Low', icon: BatteryLow, description: 'Light tasks only' },
-  { value: 'depleted', label: 'Depleted', icon: Battery, description: 'Admin or rest' },
+const setupChecklist = [
+  { id: 1, label: 'Project folder is open' },
+  { id: 2, label: 'Required software is open' },
+  { id: 3, label: 'Assets are accessible' },
+  { id: 4, label: 'Notifications are silenced' },
+  { id: 5, label: 'Timer is set' },
 ];
 
 export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
-  const [step, setStep] = useState(1);
-  const [energy, setEnergy] = useState<EnergyLevel | null>(null);
-  const [venture, setVenture] = useState<VentureId | null>(null);
-  const [workType, setWorkType] = useState<string>('');
+  const [step, setStep] = useState<'definition' | 'venture' | 'worktype' | 'setup'>('definition');
   const [focus, setFocus] = useState('');
   const [completionCondition, setCompletionCondition] = useState('');
+  const [venture, setVenture] = useState<VentureId | null>(null);
+  const [workType, setWorkType] = useState<string>('');
+  const [completedItems, setCompletedItems] = useState<number[]>([]);
 
-  const canProceed = () => {
-    switch (step) {
-      case 1: return energy !== null;
-      case 2: return venture !== null;
-      case 3: return workType !== '';
-      case 4: return focus.trim() !== '' && completionCondition.trim() !== '';
-      default: return false;
+  const canContinueDefinition = focus.trim() !== '' && completionCondition.trim() !== '';
+  const canContinueVenture = venture !== null;
+  const canContinueWorktype = workType !== '';
+  const allSetupComplete = completedItems.length === setupChecklist.length;
+
+  const toggleItem = (id: number) => {
+    setCompletedItems(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleStart = () => {
+    if (venture && workType) {
+      onLaunch({
+        energy: 'high', // Simplified - removed energy selection per design
+        venture,
+        workType,
+        focus,
+        completionCondition,
+      });
     }
   };
 
-  const handleNext = () => {
-    if (step < 4) {
-      setStep(step + 1);
-    } else if (energy && venture && workType) {
-      onLaunch({ energy, venture, workType, focus, completionCondition });
+  const getStepNumber = () => {
+    switch (step) {
+      case 'definition': return 1;
+      case 'venture': return 2;
+      case 'worktype': return 3;
+      case 'setup': return 4;
     }
   };
 
   return (
-    <div className="panel p-8 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <ClipboardCheck className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-display font-bold">Start Work Session</h2>
-            <p className="text-sm text-muted-foreground">Set up your session</p>
-          </div>
-        </div>
-        <button
-          onClick={onCancel}
-          className="p-2 rounded-lg hover:bg-secondary transition-colors"
-          aria-label="Cancel"
-        >
-          <X className="w-5 h-5 text-muted-foreground" />
-        </button>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="flex items-center gap-2 mb-8">
+    <div className="w-full max-w-lg animate-fade-in">
+      {/* Progress Indicator */}
+      <div className="flex items-center gap-2 mb-8 px-4">
         {[1, 2, 3, 4].map((s) => (
           <div key={s} className="flex items-center gap-2 flex-1">
-            <div
-              className={`h-1 flex-1 rounded-full transition-colors ${
-                s <= step ? 'bg-primary' : 'bg-secondary'
-              }`}
-            />
-            {s < 4 && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+            <div className={`progress-segment ${s <= getStepNumber() ? 'active' : ''}`} />
           </div>
         ))}
       </div>
 
-      {/* Step 1: Energy Check */}
-      {step === 1 && (
-        <div className="animate-fade-in">
-          <h3 className="text-lg font-display mb-2">Step 1: Energy Check</h3>
-          <p className="text-muted-foreground mb-6">How are your energy levels today?</p>
-          
-          <div className="grid grid-cols-2 gap-3">
-            {energyLevels.map(({ value, label, icon: Icon, description }) => (
-              <button
-                key={value}
-                onClick={() => setEnergy(value)}
-                className={`p-4 rounded-lg border-2 text-left transition-all ${
-                  energy === value
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <Icon className={`w-5 h-5 mb-2 ${energy === value ? 'text-primary' : 'text-muted-foreground'}`} />
-                <div className="font-display font-medium">{label}</div>
-                <div className="text-sm text-muted-foreground">{description}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Step 2: Venture Selection */}
-      {step === 2 && (
-        <div className="animate-fade-in">
-          <h3 className="text-lg font-display mb-2">Step 2: Select Venture</h3>
-          <p className="text-muted-foreground mb-6">Which venture are you working on?</p>
-          
-          <div className="grid grid-cols-2 gap-3">
-            {ventures.map((v) => (
-              <button
-                key={v.id}
-                onClick={() => setVenture(v.id)}
-                className={`p-4 rounded-lg border-2 text-left transition-all ${
-                  venture === v.id
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <div className="font-display font-medium">{v.name}</div>
-                <div className="text-sm text-muted-foreground">{v.tagline}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Step 3: Work Type */}
-      {step === 3 && (
-        <div className="animate-fade-in">
-          <h3 className="text-lg font-display mb-2">Step 3: Work Type</h3>
-          <p className="text-muted-foreground mb-6">What type of work are you doing?</p>
-          
-          <div className="grid grid-cols-2 gap-3">
-            {workTypes.map((type) => (
-              <button
-                key={type}
-                onClick={() => setWorkType(type)}
-                className={`p-3 rounded-lg border-2 text-left transition-all ${
-                  workType === type
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <div className="font-mono text-sm">{type}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Step 4: Define Focus */}
-      {step === 4 && (
-        <div className="animate-fade-in">
-          <h3 className="text-lg font-display mb-2">Step 4: Define Task</h3>
-          <p className="text-muted-foreground mb-6">Define what you will accomplish.</p>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="flex items-center gap-2 text-sm font-mono text-muted-foreground mb-2">
-                <Target className="w-4 h-4" />
-                Work Session Focus
-              </label>
-              <input
-                type="text"
-                value={focus}
-                onChange={(e) => setFocus(e.target.value)}
-                placeholder="What specific task are you doing?"
-                className="w-full p-3 rounded-lg bg-secondary border border-border focus:border-primary focus:outline-none font-mono text-sm"
-              />
+      <div className="card-elevated p-8">
+        {/* Step 1: Work Definition */}
+        {step === 'definition' && (
+          <div className="animate-slide-up">
+            <h2 className="text-xl font-semibold mb-2">Work Session Focus</h2>
+            <p className="text-muted-foreground mb-8">Define exactly what you will accomplish.</p>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  What are you doing?
+                </label>
+                <input
+                  type="text"
+                  value={focus}
+                  onChange={(e) => setFocus(e.target.value)}
+                  placeholder="e.g., Edit podcast episode 12"
+                  className="input-field"
+                  maxLength={80}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  How will you know when you're done?
+                </label>
+                <input
+                  type="text"
+                  value={completionCondition}
+                  onChange={(e) => setCompletionCondition(e.target.value)}
+                  placeholder="e.g., Audio is exported and uploaded"
+                  className="input-field"
+                  maxLength={80}
+                />
+              </div>
             </div>
-            <div>
-              <label className="flex items-center gap-2 text-sm font-mono text-muted-foreground mb-2">
-                <CheckCircle2 className="w-4 h-4" />
-                Completion Condition
-              </label>
-              <input
-                type="text"
-                value={completionCondition}
-                onChange={(e) => setCompletionCondition(e.target.value)}
-                placeholder="How will you know when you're done?"
-                className="w-full p-3 rounded-lg bg-secondary border border-border focus:border-primary focus:outline-none font-mono text-sm"
-              />
+
+            <div className="flex justify-between mt-10">
+              <button onClick={onCancel} className="btn-ghost">
+                Cancel
+              </button>
+              <button
+                onClick={() => setStep('venture')}
+                disabled={!canContinueDefinition}
+                className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Continue
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Navigation */}
-      <div className="flex justify-between mt-8 pt-6 border-t border-border">
-        {step > 1 ? (
-          <button
-            onClick={() => setStep(step - 1)}
-            className="btn-secondary"
-          >
-            Back
-          </button>
-        ) : (
-          <button
-            onClick={onCancel}
-            className="btn-secondary"
-          >
-            Cancel
-          </button>
         )}
-        <button
-          onClick={handleNext}
-          disabled={!canProceed()}
-          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {step === 4 ? 'Start Session' : 'Continue'}
-        </button>
+
+        {/* Step 2: Venture Selection */}
+        {step === 'venture' && (
+          <div className="animate-slide-up">
+            <h2 className="text-xl font-semibold mb-2">Select Venture</h2>
+            <p className="text-muted-foreground mb-8">Which venture is this for?</p>
+            
+            <div className="space-y-3">
+              {ventures.map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => setVenture(v.id)}
+                  className={`checklist-item ${venture === v.id ? 'completed border-primary' : ''}`}
+                >
+                  <div className={`check-circle ${venture === v.id ? 'checked' : ''}`}>
+                    {venture === v.id && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
+                  </div>
+                  <div>
+                    <div className="font-medium">{v.name}</div>
+                    <div className="text-sm text-muted-foreground">{v.tagline}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex justify-between mt-10">
+              <button onClick={() => setStep('definition')} className="btn-ghost">
+                Back
+              </button>
+              <button
+                onClick={() => setStep('worktype')}
+                disabled={!canContinueVenture}
+                className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Continue
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Work Type */}
+        {step === 'worktype' && (
+          <div className="animate-slide-up">
+            <h2 className="text-xl font-semibold mb-2">Work Type</h2>
+            <p className="text-muted-foreground mb-8">What kind of work is this?</p>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {workTypes.map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setWorkType(type)}
+                  className={`p-4 rounded-xl text-left transition-all border ${
+                    workType === type
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border bg-card hover:border-primary/30'
+                  }`}
+                >
+                  <div className="font-medium text-sm">{type}</div>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex justify-between mt-10">
+              <button onClick={() => setStep('venture')} className="btn-ghost">
+                Back
+              </button>
+              <button
+                onClick={() => setStep('setup')}
+                disabled={!canContinueWorktype}
+                className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Continue
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Setup Checklist */}
+        {step === 'setup' && (
+          <div className="animate-slide-up">
+            <h2 className="text-xl font-semibold mb-2">Setup Checklist</h2>
+            <p className="text-muted-foreground mb-8">Prepare your workspace before starting.</p>
+            
+            <div className="space-y-3">
+              {setupChecklist.map((item) => {
+                const isComplete = completedItems.includes(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => toggleItem(item.id)}
+                    className={`checklist-item ${isComplete ? 'completed' : ''}`}
+                  >
+                    <div className={`check-circle ${isComplete ? 'checked' : ''}`}>
+                      {isComplete && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
+                    </div>
+                    <span className={isComplete ? 'text-foreground' : 'text-foreground'}>
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-between mt-10">
+              <button onClick={() => setStep('worktype')} className="btn-ghost">
+                Back
+              </button>
+              <button
+                onClick={handleStart}
+                disabled={!allSetupComplete}
+                className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Start Execution
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { EmpireDashboard } from '@/components/EmpireDashboard';
+import { HomeScreen } from '@/components/HomeScreen';
 import { SessionSetup } from '@/components/SessionSetup';
 import { WorkSession } from '@/components/WorkSession';
 import { SystemShutdown } from '@/components/SystemShutdown';
 import { VentureId, EnergyLevel } from '@/types/empire';
 
-type AppView = 'dashboard' | 'setup' | 'session' | 'shutdown';
+type AppView = 'home' | 'setup' | 'session' | 'shutdown';
 
 interface SessionConfig {
   energy: EnergyLevel;
@@ -16,7 +16,7 @@ interface SessionConfig {
 }
 
 const Index = () => {
-  const [view, setView] = useState<AppView>('dashboard');
+  const [view, setView] = useState<AppView>('home');
   const [sessionConfig, setSessionConfig] = useState<SessionConfig | null>(null);
 
   const handleLaunch = (config: SessionConfig) => {
@@ -30,18 +30,23 @@ const Index = () => {
 
   const handleShutdownComplete = () => {
     setSessionConfig(null);
-    setView('dashboard');
+    setView('home');
+  };
+
+  const handlePlanNext = () => {
+    setSessionConfig(null);
+    setView('setup');
   };
 
   const handleCancel = () => {
     setSessionConfig(null);
-    setView('dashboard');
+    setView('home');
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {view === 'dashboard' && (
-        <EmpireDashboard onStartSession={() => setView('setup')} />
+      {view === 'home' && (
+        <HomeScreen onStartSession={() => setView('setup')} />
       )}
 
       {view === 'setup' && (
@@ -64,7 +69,10 @@ const Index = () => {
       )}
 
       {view === 'shutdown' && (
-        <SystemShutdown onComplete={handleShutdownComplete} />
+        <SystemShutdown 
+          onComplete={handleShutdownComplete}
+          onPlanNext={handlePlanNext}
+        />
       )}
     </div>
   );
