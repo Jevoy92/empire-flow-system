@@ -57,3 +57,62 @@ export const workTypes = [
   'Sales & Outreach',
   'Learning & Research',
 ];
+
+export const defaultTasks: Record<string, string[]> = {
+  'Content Editing': [
+    'Review feedback or notes',
+    'Audio fixes',
+    'Video fixes',
+    'Graphics or thumbnails',
+    'Export or save progress',
+  ],
+  'Content Creation': [
+    'Outline or script',
+    'Record raw content',
+    'Capture B-roll or assets',
+    'Review rough cut',
+    'Make notes for editing',
+  ],
+  'Client Communication': [
+    'Review incoming messages',
+    'Draft responses',
+    'Send updates or deliverables',
+    'Schedule follow-ups',
+    'Update client notes',
+  ],
+  'Strategic Planning': [
+    'Review current priorities',
+    'Identify blockers',
+    'Set weekly goals',
+    'Allocate time blocks',
+    'Document decisions',
+  ],
+  'Admin & Files': [
+    'Create missing folders',
+    'Move loose files',
+    'Rename inconsistent files',
+    'Archive old versions',
+    'Update file index',
+  ],
+  'Social Media': [
+    'Write captions',
+    'Select media',
+    'Schedule posts',
+    'Add hashtags or links',
+    'Engage with comments',
+  ],
+  'Sales & Outreach': [
+    'Review leads list',
+    'Draft outreach messages',
+    'Follow up on pending',
+    'Update CRM notes',
+    'Track responses',
+  ],
+  'Learning & Research': [
+    'Identify learning topic',
+    'Watch or read material',
+    'Take notes',
+    'Try practical application',
+    'Document learnings',
+  ],
+};
