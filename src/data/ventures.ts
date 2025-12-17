@@ -1,5 +1,16 @@
 import { Venture } from '@/types/empire';
 
+export type CategoryType = 'business' | 'personal';
+
+export interface Category {
+  id: string;
+  name: string;
+  tagline: string;
+  type: CategoryType;
+  color: string;
+}
+
+// Business Ventures
 export const ventures: Venture[] = [
   {
     id: 'palmer-house',
@@ -47,6 +58,37 @@ export const ventures: Venture[] = [
   },
 ];
 
+// All categories (business ventures + personal life operations)
+export const categories: Category[] = [
+  // Business Ventures
+  { id: 'palmer-house', name: 'Palmer House', tagline: 'Video Systems', type: 'business', color: 'primary' },
+  { id: 'besettld', name: 'beSettld', tagline: 'Luxury Support', type: 'business', color: 'primary' },
+  { id: 'yourboy', name: 'YourBoyJevoy', tagline: 'Artistic Expression', type: 'business', color: 'primary' },
+  { id: 'strinzees', name: 'Strinzees', tagline: 'Modular Design', type: 'business', color: 'primary' },
+  // Personal Life Operations
+  { id: 'daily-maintenance', name: 'Daily Maintenance', tagline: 'Low effort, high anxiety if skipped', type: 'personal', color: 'accent' },
+  { id: 'body-energy', name: 'Body & Energy', tagline: 'Reduce decision fatigue', type: 'personal', color: 'accent' },
+  { id: 'admin-life', name: 'Admin Life', tagline: 'Important but mentally avoided', type: 'personal', color: 'accent' },
+  { id: 'transition', name: 'Transition', tagline: 'Prevent context bleed', type: 'personal', color: 'accent' },
+  { id: 'care-relationships', name: 'Care & Relationships', tagline: 'Optional but stabilizing', type: 'personal', color: 'accent' },
+];
+
+// Work types organized by category
+export const workTypesByCategory: Record<string, string[]> = {
+  // Business work types (shared across ventures)
+  'palmer-house': ['Content Editing', 'Content Creation', 'Client Communication', 'Strategic Planning', 'Admin & Files'],
+  'besettld': ['Client Communication', 'Strategic Planning', 'Admin & Files', 'Sales & Outreach'],
+  'yourboy': ['Content Editing', 'Content Creation', 'Social Media', 'Learning & Research'],
+  'strinzees': ['Content Creation', 'Strategic Planning', 'Learning & Research'],
+  // Personal life operations
+  'daily-maintenance': ['Bank Check', 'Morning Routine', 'Evening Shutdown', 'Daily Review'],
+  'body-energy': ['Eating Session', 'Movement', 'Hydration Check'],
+  'admin-life': ['Personal Admin', 'Email Cleanup', 'Appointments', 'Documents'],
+  'transition': ['Morning Start', 'Midday Reset', 'End-of-Day Shutdown'],
+  'care-relationships': ['Family Check-in', 'Partner Time', 'Personal Reflection'],
+};
+
+// Legacy flat list for backwards compatibility
 export const workTypes = [
   'Content Editing',
   'Content Creation',
@@ -56,9 +98,27 @@ export const workTypes = [
   'Social Media',
   'Sales & Outreach',
   'Learning & Research',
+  'Bank Check',
+  'Morning Routine',
+  'Evening Shutdown',
+  'Daily Review',
+  'Eating Session',
+  'Movement',
+  'Hydration Check',
+  'Personal Admin',
+  'Email Cleanup',
+  'Appointments',
+  'Documents',
+  'Morning Start',
+  'Midday Reset',
+  'End-of-Day Shutdown',
+  'Family Check-in',
+  'Partner Time',
+  'Personal Reflection',
 ];
 
 export const defaultTasks: Record<string, string[]> = {
+  // Business work types
   'Content Editing': [
     'Review feedback or notes',
     'Audio fixes',
@@ -115,4 +175,133 @@ export const defaultTasks: Record<string, string[]> = {
     'Try practical application',
     'Document learnings',
   ],
+  // Personal life operations
+  'Bank Check': [
+    'Open bank app',
+    'Check checking balance',
+    'Check savings balance',
+    'Scan recent transactions',
+    'Note anything unusual or close',
+  ],
+  'Morning Routine': [
+    'Wake up at set time',
+    'Hydrate',
+    'Light movement or stretch',
+    'Review today\'s first session',
+    'Begin work',
+  ],
+  'Evening Shutdown': [
+    'Review tomorrow\'s first session',
+    'Write next Work Session Focus',
+    'Close open tabs',
+    'Tidy workspace',
+    'Leave work area',
+  ],
+  'Daily Review': [
+    'What got done today?',
+    'What didn\'t get done?',
+    'What needs attention tomorrow?',
+    'Any wins to acknowledge?',
+    'Close the day mentally',
+  ],
+  'Eating Session': [
+    'Decide meal from options',
+    'Prepare food',
+    'Eat without screens',
+    'Clean up dishes',
+    'Reset kitchen',
+  ],
+  'Movement': [
+    'Choose movement type',
+    'Set timer',
+    'Complete movement',
+    'Cool down',
+    'Note how you feel',
+  ],
+  'Hydration Check': [
+    'Check water bottle level',
+    'Refill if needed',
+    'Drink a full glass',
+    'Set reminder for next',
+  ],
+  'Personal Admin': [
+    'Open admin list',
+    'Handle first item fully',
+    'Move to next item',
+    'Update list status',
+    'Stop when timer ends',
+  ],
+  'Email Cleanup': [
+    'Process inbox top-down',
+    'Archive or delete obvious items',
+    'Respond to quick items',
+    'Flag items needing more time',
+    'Reach inbox zero or scheduled',
+  ],
+  'Appointments': [
+    'Review upcoming appointments',
+    'Confirm any needed',
+    'Reschedule if necessary',
+    'Add prep time blocks',
+    'Update calendar',
+  ],
+  'Documents': [
+    'Identify document to process',
+    'Read or review',
+    'Take action if needed',
+    'File appropriately',
+    'Update tracking',
+  ],
+  'Morning Start': [
+    'Review today\'s schedule',
+    'Set primary focus for today',
+    'Clear notifications',
+    'Open first work session',
+    'Begin',
+  ],
+  'Midday Reset': [
+    'Step away from workspace',
+    'Check energy level',
+    'Eat if needed',
+    'Review afternoon priorities',
+    'Return to work',
+  ],
+  'End-of-Day Shutdown': [
+    'Review what got done',
+    'Write tomorrow\'s first focus',
+    'Close all work apps',
+    'Tidy workspace',
+    'Mentally close work',
+  ],
+  'Family Check-in': [
+    'Put away devices',
+    'Ask how they\'re doing',
+    'Listen actively',
+    'Share something from your day',
+    'End naturally',
+  ],
+  'Partner Time': [
+    'Set aside devices',
+    'Give full attention',
+    'Talk without agenda',
+    'Listen more than speak',
+    'End after agreed time',
+  ],
+  'Personal Reflection': [
+    'Find quiet space',
+    'Set timer',
+    'Free write or think',
+    'Note any insights',
+    'Close gently',
+  ],
 };
+
+// Helper to get category by id
+export function getCategoryById(id: string): Category | undefined {
+  return categories.find(c => c.id === id);
+}
+
+// Helper to get work types for a category
+export function getWorkTypesForCategory(categoryId: string): string[] {
+  return workTypesByCategory[categoryId] || [];
+}
