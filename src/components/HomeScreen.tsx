@@ -10,6 +10,7 @@ interface Template {
   work_type: string;
   default_focus: string | null;
   default_completion_condition: string | null;
+  default_tasks: unknown;
   use_ai_tasks: boolean;
 }
 
@@ -43,15 +44,28 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', template.id);
 
-    sessionStorage.setItem('prefill', JSON.stringify({
-      venture: template.venture,
-      workType: template.work_type,
-      focus: template.default_focus || '',
-      completionCondition: template.default_completion_condition || '',
-      templateId: template.id,
-      useAiTasks: template.use_ai_tasks,
+    // Parse default_tasks from template
+    const defaultTasks = Array.isArray(template.default_tasks) 
+      ? template.default_tasks 
+      : [];
+    
+    // Convert to Task format with ids
+    const initialTasks = defaultTasks.map((task: any, idx: number) => ({
+      id: `task-${idx}`,
+      text: typeof task === 'string' ? task : task.text || '',
+      completed: false,
     }));
-    onStartSession();
+
+    // Navigate directly to session with all template data
+    navigate('/session', {
+      state: {
+        venture: template.venture,
+        workType: template.work_type,
+        focus: template.default_focus || template.name,
+        completionCondition: template.default_completion_condition || 'Session complete',
+        initialTasks,
+      }
+    });
   };
 
   return (

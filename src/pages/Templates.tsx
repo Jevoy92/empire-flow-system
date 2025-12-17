@@ -54,15 +54,23 @@ export default function Templates() {
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', template.id);
 
-    sessionStorage.setItem('prefill', JSON.stringify({
-      venture: template.venture,
-      workType: template.work_type,
-      focus: template.default_focus || '',
-      completionCondition: template.default_completion_condition || '',
-      templateId: template.id,
-      useAiTasks: template.use_ai_tasks,
+    // Convert template tasks to session format
+    const initialTasks = (template.default_tasks || []).map((task, idx) => ({
+      id: `task-${idx}`,
+      text: typeof task === 'string' ? task : task.text || '',
+      completed: false,
     }));
-    navigate('/');
+
+    // Navigate directly to session with all template data
+    navigate('/session', {
+      state: {
+        venture: template.venture,
+        workType: template.work_type,
+        focus: template.default_focus || template.name,
+        completionCondition: template.default_completion_condition || 'Session complete',
+        initialTasks,
+      }
+    });
   };
 
   const deleteTemplate = async (id: string) => {
