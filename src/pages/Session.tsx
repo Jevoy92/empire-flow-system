@@ -128,6 +128,7 @@ export default function Session() {
             focus={sessionConfig.focus}
             completionCondition={sessionConfig.completionCondition}
             initialTasks={sessionConfig.initialTasks}
+            startTime={startTime}
             onComplete={handleSessionComplete}
             onAbort={handleAbort}
           />
