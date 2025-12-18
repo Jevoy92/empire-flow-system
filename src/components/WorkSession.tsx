@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { VentureId } from '@/types/empire';
 import { ventures, defaultTasks } from '@/data/ventures';
-import { X, Plus, Trash2, Check } from 'lucide-react';
+import { X, Plus, Trash2, Check, Clock } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Task {
   id: string;
@@ -15,12 +16,15 @@ interface WorkSessionProps {
   focus: string;
   completionCondition: string;
   initialTasks?: Task[];
+  startTime: Date;
   onComplete: (tasks: Task[]) => void;
   onAbort: () => void;
 }
 
-export function WorkSession({ venture, workType, focus, completionCondition, initialTasks, onComplete, onAbort }: WorkSessionProps) {
+export function WorkSession({ venture, workType, focus, completionCondition, initialTasks, startTime, onComplete, onAbort }: WorkSessionProps) {
   const ventureData = ventures.find(v => v.id === venture);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [totalVentureMinutes, setTotalVentureMinutes] = useState(0);
   
   // Use provided initialTasks if available, otherwise fall back to default tasks for this work type
   const getInitialTasks = (): Task[] => {
@@ -37,6 +41,48 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   const [tasks, setTasks] = useState<Task[]>(getInitialTasks);
   const [newTaskText, setNewTaskText] = useState('');
   const [showAddTask, setShowAddTask] = useState(false);
+
+  // Running timer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsedSeconds(Math.floor((new Date().getTime() - startTime.getTime()) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [startTime]);
+
+  // Fetch total time for this venture
+  useEffect(() => {
+    const fetchVentureTime = async () => {
+      const { data } = await supabase
+        .from('sessions')
+        .select('duration_minutes')
+        .eq('venture', venture)
+        .eq('status', 'completed');
+      
+      if (data) {
+        const total = data.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+        setTotalVentureMinutes(total);
+      }
+    };
+    fetchVentureTime();
+  }, [venture]);
+
+  const formatTime = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatMinutes = (minutes: number) => {
+    if (minutes < 60) return `${minutes}m`;
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+  };
 
   const completedCount = tasks.filter(t => t.completed).length;
   const progress = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
@@ -78,6 +124,19 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
 
   return (
     <div className="w-full max-w-lg animate-fade-in">
+      {/* Timer Display */}
+      <div className="mb-4 flex items-center justify-center gap-6 text-sm">
+        <div className="flex items-center gap-2 text-primary font-mono text-lg">
+          <Clock className="w-4 h-4" />
+          <span>{formatTime(elapsedSeconds)}</span>
+        </div>
+        {totalVentureMinutes > 0 && (
+          <div className="text-muted-foreground">
+            {ventureData?.name}: {formatMinutes(totalVentureMinutes)} total
+          </div>
+        )}
+      </div>
+
       {/* Progress Bar */}
       <div className="mb-6 px-4">
         <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
