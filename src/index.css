@@ -44,6 +44,17 @@
     /* Session Colors */
     --session-warm: 35 100% 97%;
 
+    /* Venture Colors */
+    --venture-palmer: 217 85% 55%;
+    --venture-besettld: 174 65% 50%;
+    --venture-yourboy: 35 90% 55%;
+    --venture-strinzees: 280 65% 55%;
+    --venture-maintenance: 200 70% 50%;
+    --venture-energy: 145 65% 45%;
+    --venture-admin: 220 15% 55%;
+    --venture-transition: 30 70% 55%;
+    --venture-care: 340 65% 55%;
+
     --sidebar-background: 220 15% 97%;
     --sidebar-foreground: 220 20% 25%;
     --sidebar-primary: 248 85% 65%;
@@ -71,9 +82,9 @@
 
 @layer components {
   .card-elevated {
-    @apply bg-card rounded-xl;
-    box-shadow: 0 1px 3px hsl(0 0% 0% / 0.06),
-                0 4px 16px hsl(0 0% 0% / 0.04);
+    @apply bg-card rounded-2xl;
+    box-shadow: 0 1px 3px hsl(0 0% 0% / 0.04),
+                0 4px 12px hsl(0 0% 0% / 0.03);
   }
 
   .btn-primary {
@@ -149,6 +160,40 @@
 
   .stage-number.complete {
     @apply bg-status-active text-white;
+  }
+
+  /* Safe area for bottom navigation */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Venture color utilities */
+  .bg-venture-palmer {
+    background-color: hsl(var(--venture-palmer));
+  }
+  .bg-venture-besettld {
+    background-color: hsl(var(--venture-besettld));
+  }
+  .bg-venture-yourboy {
+    background-color: hsl(var(--venture-yourboy));
+  }
+  .bg-venture-strinzees {
+    background-color: hsl(var(--venture-strinzees));
+  }
+  .bg-venture-maintenance {
+    background-color: hsl(var(--venture-maintenance));
+  }
+  .bg-venture-energy {
+    background-color: hsl(var(--venture-energy));
+  }
+  .bg-venture-admin {
+    background-color: hsl(var(--venture-admin));
+  }
+  .bg-venture-transition {
+    background-color: hsl(var(--venture-transition));
+  }
+  .bg-venture-care {
+    background-color: hsl(var(--venture-care));
   }
 }
 
