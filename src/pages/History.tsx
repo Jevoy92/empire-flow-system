@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { Clock, CheckCircle, XCircle, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,6 +16,31 @@ interface Session {
   completed_at: string | null;
   duration_minutes: number | null;
 }
+
+// Venture colors mapping
+const ventureColors: Record<string, string> = {
+  'palmer-house': 'bg-venture-palmer',
+  'besettld': 'bg-venture-besettld',
+  'yourboy': 'bg-venture-yourboy',
+  'strinzees': 'bg-venture-strinzees',
+  'daily-maintenance': 'bg-venture-maintenance',
+  'body-energy': 'bg-venture-energy',
+  'admin-life': 'bg-venture-admin',
+  'transition': 'bg-venture-transition',
+  'care-relationships': 'bg-venture-care',
+};
+
+const ventureNames: Record<string, string> = {
+  'palmer-house': 'Palmer House',
+  'besettld': 'beSettld',
+  'yourboy': 'YourBoyJevoy',
+  'strinzees': 'Strinzees',
+  'daily-maintenance': 'Daily Maintenance',
+  'body-energy': 'Body & Energy',
+  'admin-life': 'Admin Life',
+  'transition': 'Transition',
+  'care-relationships': 'Care & Relationships',
+};
 
 export default function History() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -44,7 +69,6 @@ export default function History() {
   };
 
   const startSimilar = (session: Session) => {
-    // Store session config in sessionStorage and navigate to setup
     sessionStorage.setItem('prefill', JSON.stringify({
       venture: session.venture,
       workType: session.work_type,
@@ -54,22 +78,47 @@ export default function History() {
     navigate('/');
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-status-active" />;
-      case 'abandoned':
-        return <XCircle className="w-4 h-4 text-destructive" />;
-      default:
-        return <Clock className="w-4 h-4 text-muted-foreground" />;
-    }
+  const formatDuration = (minutes: number | null) => {
+    if (!minutes) return '';
+    if (minutes < 60) return `${minutes}m`;
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
   };
+
+  const formatSessionTime = (startedAt: string, completedAt: string | null) => {
+    const start = parseISO(startedAt);
+    const startTime = format(start, 'h:mm a');
+    if (completedAt) {
+      const end = parseISO(completedAt);
+      const endTime = format(end, 'h:mm a');
+      return `${startTime} - ${endTime}`;
+    }
+    return startTime;
+  };
+
+  const getDateLabel = (dateStr: string) => {
+    const date = parseISO(dateStr);
+    if (isToday(date)) return 'Today';
+    if (isYesterday(date)) return 'Yesterday';
+    return format(date, 'EEEE, MMMM d');
+  };
+
+  // Group sessions by date
+  const groupedSessions = sessions.reduce((groups, session) => {
+    const dateKey = format(parseISO(session.started_at), 'yyyy-MM-dd');
+    if (!groups[dateKey]) {
+      groups[dateKey] = [];
+    }
+    groups[dateKey].push(session);
+    return groups;
+  }, {} as Record<string, Session[]>);
 
   if (loading) {
     return (
-      <div className="min-h-screen pb-20 p-6">
+      <div className="min-h-screen pb-24 p-6">
         <div className="max-w-lg mx-auto">
-          <h1 className="text-2xl font-semibold mb-6">Past Sessions</h1>
+          <h1 className="text-2xl font-semibold mb-6">History</h1>
           <div className="text-muted-foreground">Loading...</div>
         </div>
       </div>
@@ -77,9 +126,9 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-screen pb-20 p-6 animate-fade-in">
+    <div className="min-h-screen pb-24 p-6 animate-fade-in">
       <div className="max-w-lg mx-auto">
-        <h1 className="text-2xl font-semibold mb-6">Past Sessions</h1>
+        <h1 className="text-2xl font-semibold mb-6">History</h1>
 
         {sessions.length === 0 ? (
           <div className="card-elevated p-8 text-center">
@@ -90,49 +139,68 @@ export default function History() {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {sessions.map((session) => {
-              const completedTasks = session.tasks.filter(t => t.completed).length;
-              const totalTasks = session.tasks.length;
+          <div className="space-y-6">
+            {Object.entries(groupedSessions).map(([dateKey, daySessions]) => (
+              <div key={dateKey}>
+                <h2 className="text-sm font-medium text-muted-foreground mb-3">
+                  {getDateLabel(daySessions[0].started_at)}
+                </h2>
+                <div className="space-y-2">
+                  {daySessions.map((session) => {
+                    const completedTasks = session.tasks.filter(t => t.completed).length;
+                    const totalTasks = session.tasks.length;
+                    const colorClass = ventureColors[session.venture] || 'bg-primary';
 
-              return (
-                <div
-                  key={session.id}
-                  className="card-elevated p-4"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        {getStatusIcon(session.status)}
-                        <span className="text-sm text-muted-foreground">
-                          {session.venture} • {session.work_type}
-                        </span>
+                    return (
+                      <div
+                        key={session.id}
+                        className="card-elevated p-3 flex items-center gap-3"
+                      >
+                        {/* Category Icon */}
+                        <div className={`w-10 h-10 rounded-xl ${colorClass} flex items-center justify-center flex-shrink-0`}>
+                          {session.status === 'completed' ? (
+                            <CheckCircle className="w-5 h-5 text-white" />
+                          ) : session.status === 'abandoned' ? (
+                            <XCircle className="w-5 h-5 text-white" />
+                          ) : (
+                            <Clock className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+
+                        {/* Session Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-foreground text-sm truncate">
+                            {session.focus}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {ventureNames[session.venture] || session.venture} • {session.work_type}
+                          </div>
+                        </div>
+
+                        {/* Duration & Time */}
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-sm font-medium text-foreground">
+                            {formatDuration(session.duration_minutes)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {totalTasks > 0 && `${completedTasks}/${totalTasks}`}
+                          </div>
+                        </div>
+
+                        {/* Play Button */}
+                        <button
+                          onClick={() => startSimilar(session)}
+                          className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors flex-shrink-0"
+                          title="Start similar session"
+                        >
+                          <Play className="w-4 h-4 ml-0.5" />
+                        </button>
                       </div>
-                      <h3 className="font-medium text-foreground">{session.focus}</h3>
-                    </div>
-                    <button
-                      onClick={() => startSimilar(session)}
-                      className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-primary transition-colors"
-                      title="Start similar session"
-                    >
-                      <Play className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span>
-                      {formatDistanceToNow(new Date(session.started_at), { addSuffix: true })}
-                    </span>
-                    {totalTasks > 0 && (
-                      <span>{completedTasks}/{totalTasks} tasks</span>
-                    )}
-                    {session.duration_minutes && (
-                      <span>{session.duration_minutes} min</span>
-                    )}
-                  </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>

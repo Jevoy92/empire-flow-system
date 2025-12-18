@@ -68,6 +68,17 @@ export default {
         session: {
           warm: "hsl(var(--session-warm))",
         },
+        venture: {
+          palmer: "hsl(var(--venture-palmer))",
+          besettld: "hsl(var(--venture-besettld))",
+          yourboy: "hsl(var(--venture-yourboy))",
+          strinzees: "hsl(var(--venture-strinzees))",
+          maintenance: "hsl(var(--venture-maintenance))",
+          energy: "hsl(var(--venture-energy))",
+          admin: "hsl(var(--venture-admin))",
+          transition: "hsl(var(--venture-transition))",
+          care: "hsl(var(--venture-care))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
