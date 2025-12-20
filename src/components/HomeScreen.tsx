@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Layout } from 'lucide-react';
+import { ArrowRight, Layout, Play } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
@@ -18,12 +18,41 @@ interface HomeScreenProps {
   onStartSession: () => void;
 }
 
+const ventureColors: Record<string, string> = {
+  'Palmer House': 'bg-venture-palmer',
+  'beSettld': 'bg-venture-besettld',
+  'YourBoyJevoy': 'bg-venture-jevoy',
+  'Strinzees': 'bg-venture-strinzees',
+  'Personal': 'bg-venture-personal',
+  'Health': 'bg-venture-health',
+  'Finance': 'bg-venture-finance',
+};
+
+const getGreeting = (): string => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+};
+
+const getVentureColor = (venture: string): string => {
+  return ventureColors[venture] || 'bg-primary';
+};
+
 export function HomeScreen({ onStartSession }: HomeScreenProps) {
   const [recentTemplates, setRecentTemplates] = useState<Template[]>([]);
+  const [greeting, setGreeting] = useState(getGreeting());
   const navigate = useNavigate();
 
   useEffect(() => {
     loadRecentTemplates();
+    
+    // Update greeting every minute
+    const interval = setInterval(() => {
+      setGreeting(getGreeting());
+    }, 60000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const loadRecentTemplates = async () => {
@@ -44,19 +73,16 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', template.id);
 
-    // Parse default_tasks from template
     const defaultTasks = Array.isArray(template.default_tasks) 
       ? template.default_tasks 
       : [];
     
-    // Convert to Task format with ids
     const initialTasks = defaultTasks.map((task: any, idx: number) => ({
       id: `task-${idx}`,
       text: typeof task === 'string' ? task : task.text || '',
       completed: false,
     }));
 
-    // Navigate directly to session with all template data
     navigate('/session', {
       state: {
         venture: template.venture,
@@ -72,6 +98,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     <div className="min-h-screen flex items-center justify-center p-8 pb-24">
       <div className="w-full max-w-md animate-fade-in">
         <div className="card-elevated p-12">
+          <p className="text-muted-foreground text-sm mb-1">{greeting}</p>
           <h1 className="text-2xl font-semibold text-foreground mb-3">
             What are you working on?
           </h1>
@@ -100,7 +127,9 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
                   onClick={() => useTemplate(template)}
                   className="w-full p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors text-left flex items-center gap-3"
                 >
-                  <Layout className="w-5 h-5 text-muted-foreground" />
+                  <div className={`w-10 h-10 rounded-xl ${getVentureColor(template.venture)} flex items-center justify-center`}>
+                    <Play className="w-4 h-4 text-white fill-white" />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-foreground truncate">
                       {template.name}
