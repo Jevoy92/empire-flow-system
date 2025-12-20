@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          onboarding_completed: boolean
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          onboarding_completed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          onboarding_completed?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           completed_at: string | null
@@ -25,6 +52,7 @@ export type Database = {
           started_at: string
           status: string
           tasks: Json | null
+          user_id: string | null
           venture: string
           work_type: string
         }
@@ -38,6 +66,7 @@ export type Database = {
           started_at?: string
           status?: string
           tasks?: Json | null
+          user_id?: string | null
           venture: string
           work_type: string
         }
@@ -51,6 +80,7 @@ export type Database = {
           started_at?: string
           status?: string
           tasks?: Json | null
+          user_id?: string | null
           venture?: string
           work_type?: string
         }
@@ -66,6 +96,7 @@ export type Database = {
           last_used_at: string | null
           name: string
           use_ai_tasks: boolean
+          user_id: string | null
           venture: string
           work_type: string
         }
@@ -78,6 +109,7 @@ export type Database = {
           last_used_at?: string | null
           name: string
           use_ai_tasks?: boolean
+          user_id?: string | null
           venture: string
           work_type: string
         }
@@ -90,10 +122,43 @@ export type Database = {
           last_used_at?: string | null
           name?: string
           use_ai_tasks?: boolean
+          user_id?: string | null
           venture?: string
           work_type?: string
         }
         Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          default_session_duration: number
+          id: string
+          theme: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_session_duration?: number
+          id: string
+          theme?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_session_duration?: number
+          id?: string
+          theme?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
