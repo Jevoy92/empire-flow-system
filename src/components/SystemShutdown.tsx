@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Check, X, Save, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { getCategoryById } from '@/data/ventures';
+import { CategoryType, getCategoryById } from '@/data/ventures';
 
 interface SystemShutdownProps {
   onComplete: () => void;
@@ -34,11 +34,12 @@ const encouragingMessages = [
   "You showed up. That matters.",
 ];
 
-// Generate sender role based on category and work type
-const generateSenderRole = (categoryId: string, workType: string): string => {
-  const category = getCategoryById(categoryId);
-  const categoryName = category?.name || categoryId;
-  
+// Generate sender role based on venture type and work type
+const generateSenderRole = (
+  ventureType: CategoryType | undefined,
+  ventureName: string,
+  workType: string
+): string => {
   // Map work types to role names
   const roleMap: Record<string, string> = {
     'Social Media': 'Marketing',
@@ -53,14 +54,16 @@ const generateSenderRole = (categoryId: string, workType: string): string => {
   };
 
   const roleName = roleMap[workType] || workType.split(' ')[0];
-  
+
   // For business ventures, use the venture name
-  if (category?.type === 'business') {
-    return `${categoryName} ${roleName}`;
+  if (ventureType === 'business') {
+    return `${ventureName} ${roleName}`;
   }
-  
+
   return `${roleName} You`;
 };
+
+type VentureMeta = { name: string; type?: CategoryType };
 
 export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate, sessionStats, sessionContext }: SystemShutdownProps) {
   const [completedItems, setCompletedItems] = useState<number[]>([]);
@@ -70,6 +73,7 @@ export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate, sessi
   const [saved, setSaved] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [ventureMeta, setVentureMeta] = useState<VentureMeta | null>(null);
   const [encouragingMessage] = useState(() => 
     encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)]
   );
@@ -81,6 +85,58 @@ export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate, sessi
   };
 
   const allComplete = completedItems.length === shutdownChecklist.length;
+
+  // Fetch venture meta for personalized sender role (supports user-defined ventures)
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      if (!sessionContext?.categoryId) {
+        setVentureMeta(null);
+        return;
+      }
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Prefer user-defined venture by name
+        const { data: uv } = await supabase
+          .from('user_ventures')
+          .select('name,type')
+          .eq('user_id', user.id)
+          .eq('name', sessionContext.categoryId)
+          .maybeSingle();
+
+        if (cancelled) return;
+
+        if (uv?.name) {
+          setVentureMeta({ name: uv.name, type: uv.type as CategoryType });
+          return;
+        }
+
+        // Fallback to legacy hardcoded categories
+        const cat = getCategoryById(sessionContext.categoryId);
+        if (cat) {
+          setVentureMeta({ name: cat.name, type: cat.type });
+          return;
+        }
+
+        // Final fallback: show raw venture string
+        setVentureMeta({ name: sessionContext.categoryId, type: undefined });
+      } catch {
+        // Keep old behavior on failure
+        const cat = sessionContext?.categoryId ? getCategoryById(sessionContext.categoryId) : undefined;
+        setVentureMeta(cat ? { name: cat.name, type: cat.type } : null);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionContext?.categoryId]);
 
   // Trigger celebration when all items complete
   useEffect(() => {
@@ -105,7 +161,10 @@ export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate, sessi
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const senderRole = generateSenderRole(sessionContext.categoryId, sessionContext.workType);
+      const ventureName = ventureMeta?.name || getCategoryById(sessionContext.categoryId)?.name || sessionContext.categoryId;
+      const ventureType = ventureMeta?.type || getCategoryById(sessionContext.categoryId)?.type;
+
+      const senderRole = generateSenderRole(ventureType, ventureName, sessionContext.workType);
 
       await supabase
         .from('future_notes')
