@@ -28,14 +28,14 @@ interface StatCardProps {
   icon: React.ReactNode;
   label: string;
   value: string | number;
-  gradient?: string;
+  bgColor?: string;
 }
 
-function StatCard({ icon, label, value, gradient = 'from-primary/20 to-primary/5' }: StatCardProps) {
+function StatCard({ icon, label, value, bgColor = 'bg-primary/10' }: StatCardProps) {
   return (
-    <div className={`p-4 rounded-2xl bg-gradient-to-br ${gradient} border border-border/50`}>
+    <div className={`p-4 rounded-2xl ${bgColor} border border-border/50`}>
       <div className="flex items-center gap-2 mb-2">
-        <div className="p-1.5 rounded-lg bg-background/50">
+        <div className="p-1.5 rounded-lg bg-background/80">
           {icon}
         </div>
       </div>
@@ -176,7 +176,7 @@ export default function Settings() {
         </div>
 
         {/* Profile Hero */}
-        <div className="relative p-6 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 mb-6">
+        <div className="relative p-6 rounded-2xl bg-primary/5 border border-primary/20 mb-6">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xl font-bold">
               {initials}
@@ -229,25 +229,25 @@ export default function Settings() {
             icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
             label="Sessions"
             value={stats.total_sessions_completed}
-            gradient="from-emerald-500/20 to-emerald-500/5"
+            bgColor="bg-emerald-500/10"
           />
           <StatCard
             icon={<Clock className="w-4 h-4 text-blue-500" />}
             label="Time Focused"
             value={formatTime(stats.total_minutes_worked)}
-            gradient="from-blue-500/20 to-blue-500/5"
+            bgColor="bg-blue-500/10"
           />
           <StatCard
             icon={<Flame className="w-4 h-4 text-orange-500" />}
             label="Day Streak"
             value={stats.current_streak}
-            gradient="from-orange-500/20 to-orange-500/5"
+            bgColor="bg-orange-500/10"
           />
           <StatCard
             icon={<FolderKanban className="w-4 h-4 text-violet-500" />}
             label="Projects Done"
             value={stats.projects_completed}
-            gradient="from-violet-500/20 to-violet-500/5"
+            bgColor="bg-violet-500/10"
           />
         </div>
 
