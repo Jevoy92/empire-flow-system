@@ -24,6 +24,9 @@ export function Navigation() {
   }
 
   const isWorkflowsActive = location.pathname === '/workflows' || location.pathname === '/templates' || location.pathname === '/projects';
+  
+  // Preserve demo mode in navigation links
+  const demoSuffix = isDemo ? '?demo=1' : '';
 
   return (
     <>
@@ -31,7 +34,7 @@ export function Navigation() {
         <div className="max-w-lg mx-auto flex items-center justify-between px-6 py-2 relative">
           {/* Home */}
           <Link
-            to="/"
+            to={`/${demoSuffix}`}
             className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
               location.pathname === '/'
                 ? 'text-primary'
@@ -44,7 +47,7 @@ export function Navigation() {
 
           {/* History */}
           <Link
-            to="/history"
+            to={`/history${demoSuffix}`}
             className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
               location.pathname === '/history'
                 ? 'text-primary'
@@ -73,7 +76,7 @@ export function Navigation() {
 
           {/* Workflows (merged Projects + Templates) */}
           <Link
-            to="/workflows"
+            to={`/workflows${demoSuffix}`}
             className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
               isWorkflowsActive
                 ? 'text-primary'
@@ -86,7 +89,7 @@ export function Navigation() {
 
           {/* Settings */}
           <Link
-            to="/settings"
+            to={`/settings${demoSuffix}`}
             className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
               location.pathname === '/settings'
                 ? 'text-primary'
