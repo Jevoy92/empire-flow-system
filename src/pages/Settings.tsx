@@ -7,7 +7,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserStats } from '@/hooks/useUserStats';
 import { achievements } from '@/data/achievements';
-import { ArrowLeft, Loader2, LogOut, User, Trophy, Flame, Clock, CheckCircle2, FolderKanban, ChevronRight, Palette, Timer } from 'lucide-react';
+import { characterAvatars } from '@/data/avatars';
+import { ArrowLeft, Loader2, LogOut, User, Trophy, Flame, Clock, CheckCircle2, FolderKanban, ChevronRight, Palette, Timer, Info, Lock, Trash2, Camera } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import {
   Select,
@@ -25,6 +26,9 @@ import {
 } from '@/components/ui/sheet';
 import AchievementsPanel from '@/components/AchievementsPanel';
 import StatDetailSheet from '@/components/StatDetailSheet';
+import { AvatarPicker } from '@/components/AvatarPicker';
+import { ChangePasswordModal } from '@/components/ChangePasswordModal';
+import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -38,8 +42,11 @@ function StatCard({ icon, label, value, bgColor = 'bg-primary/10', onClick }: St
   return (
     <button 
       onClick={onClick}
-      className={`p-4 rounded-2xl ${bgColor} border border-border/50 text-left w-full transition-all hover:scale-[1.02] hover:shadow-md active:scale-[0.98]`}
+      className={`relative p-4 rounded-2xl ${bgColor} border border-border/50 text-left w-full transition-all hover:scale-[1.02] hover:shadow-md active:scale-[0.98]`}
     >
+      <div className="absolute top-2 right-2">
+        <Info className="w-3.5 h-3.5 text-muted-foreground/50" />
+      </div>
       <div className="flex items-center gap-2 mb-2">
         <div className="p-1.5 rounded-lg bg-background/80">
           {icon}
@@ -52,7 +59,7 @@ function StatCard({ icon, label, value, bgColor = 'bg-primary/10', onClick }: St
 }
 
 export default function Settings() {
-  const { user, profile, settings, loading, isAuthenticated, updateProfile, updateSettings, signOut } = useAuth();
+  const { user, profile, settings, loading, isAuthenticated, updateProfile, updateSettings, signOut, refetchProfile } = useAuth();
   const { stats, loading: statsLoading, unlockedCount, totalCount, progressPercentage } = useUserStats();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -65,6 +72,12 @@ export default function Settings() {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [activeStatSheet, setActiveStatSheet] = useState<'sessions' | 'time' | 'streak' | 'projects' | null>(null);
+  
+  // New state for modals
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -75,6 +88,7 @@ export default function Settings() {
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name || '');
+      setAvatarUrl(profile.avatar_url);
     }
     if (settings) {
       setTheme(settings.theme);
@@ -147,6 +161,16 @@ export default function Settings() {
     }
   };
 
+  const handleAvatarChange = (newAvatarUrl: string) => {
+    setAvatarUrl(newAvatarUrl);
+    refetchProfile();
+  };
+
+  const handleAccountDeleted = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
   const formatTime = (minutes: number): string => {
     if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
@@ -160,6 +184,39 @@ export default function Settings() {
     .slice(-3)
     .reverse();
 
+  // Get avatar display
+  const getAvatarDisplay = () => {
+    if (avatarUrl?.startsWith('character:')) {
+      const charId = avatarUrl.replace('character:', '');
+      const char = characterAvatars.find(c => c.id === charId);
+      if (char) {
+        return (
+          <div className={`w-16 h-16 rounded-full ${char.color} flex items-center justify-center text-2xl`}>
+            {char.emoji}
+          </div>
+        );
+      }
+    }
+    if (avatarUrl && !avatarUrl.startsWith('character:')) {
+      return (
+        <img 
+          src={avatarUrl} 
+          alt="Profile" 
+          className="w-16 h-16 rounded-full object-cover"
+        />
+      );
+    }
+    // Default: initials
+    const initials = displayName
+      ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+      : user?.email?.[0]?.toUpperCase() || '?';
+    return (
+      <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xl font-bold">
+        {initials}
+      </div>
+    );
+  };
+
   if (loading || statsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -172,10 +229,6 @@ export default function Settings() {
     displayName !== (profile?.display_name || '') ||
     theme !== (settings?.theme || 'system') ||
     sessionDuration !== (settings?.default_session_duration || 25);
-
-  const initials = displayName
-    ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : user?.email?.[0]?.toUpperCase() || '?';
 
   return (
     <div className="min-h-screen bg-background p-6 pb-24">
@@ -194,9 +247,15 @@ export default function Settings() {
         {/* Profile Hero */}
         <div className="relative p-6 rounded-2xl bg-primary/5 border border-primary/20 mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xl font-bold">
-              {initials}
-            </div>
+            <button 
+              onClick={() => setShowAvatarPicker(true)}
+              className="relative group"
+            >
+              {getAvatarDisplay()}
+              <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <Camera className="w-5 h-5 text-white" />
+              </div>
+            </button>
             <div className="flex-1 min-w-0">
               {isEditing ? (
                 <Input
@@ -238,6 +297,17 @@ export default function Settings() {
             </div>
           )}
         </div>
+
+        {/* Avatar Picker */}
+        {user && (
+          <AvatarPicker
+            open={showAvatarPicker}
+            onOpenChange={setShowAvatarPicker}
+            currentAvatar={avatarUrl}
+            userId={user.id}
+            onAvatarChange={handleAvatarChange}
+          />
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 mb-6">
@@ -394,6 +464,48 @@ export default function Settings() {
             </Button>
           )}
         </div>
+
+        {/* Account Section */}
+        <div className="p-4 rounded-2xl bg-card border border-border mb-6">
+          <h3 className="font-medium text-foreground mb-4">Account</h3>
+          <div className="space-y-2">
+            <button 
+              onClick={() => setShowChangePassword(true)}
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-muted transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Lock className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-foreground">Change Password</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+            
+            <button 
+              onClick={() => setShowDeleteAccount(true)}
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-destructive/10 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <Trash2 className="w-4 h-4 text-destructive" />
+                <span className="text-sm text-destructive">Delete Account</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-destructive" />
+            </button>
+          </div>
+        </div>
+
+        {/* Change Password Modal */}
+        <ChangePasswordModal
+          open={showChangePassword}
+          onOpenChange={setShowChangePassword}
+        />
+
+        {/* Delete Account Dialog */}
+        <DeleteAccountDialog
+          open={showDeleteAccount}
+          onOpenChange={setShowDeleteAccount}
+          userEmail={user?.email || ''}
+          onDeleted={handleAccountDeleted}
+        />
 
         {/* Sign Out */}
         <Button
