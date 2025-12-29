@@ -553,6 +553,7 @@ export default function Workflows() {
                   key={project.id}
                   project={project}
                   onContinue={() => handleContinueProject(project)}
+                  onRefresh={() => {}}
                 />
               ))}
             </div>
@@ -616,18 +617,19 @@ export default function Workflows() {
 
         {/* Template Edit Modal */}
         <TemplateEditModal
-          open={isEditModalOpen}
-          onOpenChange={setIsEditModalOpen}
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
           template={editingTemplate}
           onSave={handleSaveTemplate}
-          isCreating={isCreating}
+          isNew={isCreating}
         />
 
         {/* Project Create Modal */}
         <ProjectCreateModal
-          open={showProjectModal}
-          onOpenChange={setShowProjectModal}
-          projectTemplates={projectTemplates}
+          isOpen={showProjectModal}
+          onClose={() => setShowProjectModal(false)}
+          onCreated={() => setShowProjectModal(false)}
+          templates={projectTemplates}
         />
       </div>
     </div>
