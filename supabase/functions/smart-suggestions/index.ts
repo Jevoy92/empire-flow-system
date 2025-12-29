@@ -6,6 +6,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface UserInsights {
+  preferences?: Record<string, unknown>;
+  patterns?: Record<string, unknown>;
+  recent_context?: {
+    pending_items?: Array<{ text: string; mentioned_at: string }>;
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -22,9 +30,14 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
+    
+    // Service client for updating insights
+    const supabaseService = createClient(supabaseUrl, serviceKey);
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
@@ -34,17 +47,17 @@ serve(async (req) => {
       });
     }
 
-    // Fetch user data in parallel
-    const [sessionsRes, templatesRes, projectsRes, statsRes] = await Promise.all([
+    // Fetch user data in parallel (including AI insights)
+    const [sessionsRes, templatesRes, projectsRes, statsRes, insightsRes] = await Promise.all([
       supabase
         .from('sessions')
-        .select('venture, work_type, focus, started_at, status')
+        .select('venture, work_type, focus, started_at, status, duration_minutes')
         .eq('user_id', user.id)
         .order('started_at', { ascending: false })
-        .limit(20), // Increased to detect patterns
+        .limit(20),
       supabase
         .from('templates')
-        .select('name, venture, work_type, last_used_at')
+        .select('id, name, venture, work_type, last_used_at')
         .eq('user_id', user.id)
         .order('last_used_at', { ascending: false, nullsFirst: false })
         .limit(10),
@@ -60,6 +73,11 @@ serve(async (req) => {
         .select('current_streak, total_sessions_completed, unique_categories_used')
         .eq('id', user.id)
         .maybeSingle(),
+      supabase
+        .from('ai_user_insights')
+        .select('preferences, patterns, recent_context')
+        .eq('user_id', user.id)
+        .maybeSingle(),
     ]);
 
     const sessions = sessionsRes.data || [];
@@ -69,10 +87,11 @@ serve(async (req) => {
       stages: Array.isArray(p.stages) ? p.stages : [],
     }));
     const stats = statsRes.data;
+    const insights: UserInsights | null = insightsRes.data;
 
     // Analyze work patterns
     const workTypeCount: Record<string, number> = {};
-    sessions.forEach(s => {
+    sessions.forEach((s: { work_type: string }) => {
       workTypeCount[s.work_type] = (workTypeCount[s.work_type] || 0) + 1;
     });
     const repeatedWorkTypes = Object.entries(workTypeCount)
@@ -85,7 +104,7 @@ serve(async (req) => {
     const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long' });
     const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
-    // Build context for AI
+    // Build context for AI (including insights)
     const contextParts: string[] = [];
     contextParts.push(`Current time: ${timeOfDay} on ${dayOfWeek}`);
     
@@ -94,8 +113,32 @@ serve(async (req) => {
       contextParts.push(`Current streak: ${stats.current_streak} days`);
     }
 
+    // Add AI-learned insights to context
+    if (insights?.patterns) {
+      const patterns = insights.patterns as Record<string, unknown>;
+      if (patterns.avg_session_length) {
+        contextParts.push(`User's average session length: ${patterns.avg_session_length} minutes`);
+      }
+      if (patterns.most_common_work_type) {
+        contextParts.push(`Most common work type: ${patterns.most_common_work_type}`);
+      }
+    }
+
+    if (insights?.preferences) {
+      const prefs = insights.preferences as Record<string, unknown>;
+      if (prefs.preferred_work_time) {
+        contextParts.push(`User prefers working in the ${prefs.preferred_work_time}`);
+      }
+    }
+
+    // Check for pending follow-ups from past AI conversations
+    if (insights?.recent_context?.pending_items && insights.recent_context.pending_items.length > 0) {
+      const pendingItems = insights.recent_context.pending_items;
+      contextParts.push(`PENDING FOLLOW-UPS from past conversations: ${pendingItems.map(p => p.text).join('; ')}`);
+    }
+
     if (sessions.length > 0) {
-      const recentVentures = [...new Set(sessions.slice(0, 5).map(s => s.venture))];
+      const recentVentures = [...new Set(sessions.slice(0, 5).map((s: { venture: string }) => s.venture))];
       contextParts.push(`Recent work categories: ${recentVentures.join(', ')}`);
       
       const lastSession = sessions[0];
@@ -110,19 +153,19 @@ serve(async (req) => {
     }
 
     if (templates.length > 0) {
-      const unusedTemplates = templates.filter(t => {
+      const unusedTemplates = templates.filter((t: { last_used_at: string | null }) => {
         if (!t.last_used_at) return true;
         const daysSinceUsed = Math.floor((now.getTime() - new Date(t.last_used_at).getTime()) / (1000 * 60 * 60 * 24));
         return daysSinceUsed > 5;
       });
       if (unusedTemplates.length > 0) {
-        contextParts.push(`Unused templates: ${unusedTemplates.map(t => t.name).join(', ')}`);
+        contextParts.push(`Unused templates: ${unusedTemplates.map((t: { name: string }) => t.name).join(', ')}`);
       }
     }
 
     if (projects.length > 0) {
-      const activeProjects = projects.filter(p => p.status === 'active');
-      activeProjects.forEach(p => {
+      const activeProjects = projects.filter((p: { status: string }) => p.status === 'active');
+      activeProjects.forEach((p: { name: string; stages: Array<{ name: string }>; current_stage: number }) => {
         const currentStage = p.stages[p.current_stage];
         if (currentStage) {
           contextParts.push(`Active project "${p.name}" is on stage "${currentStage.name}" (${p.current_stage + 1}/${p.stages.length})`);
@@ -139,7 +182,7 @@ serve(async (req) => {
       });
     }
 
-    const systemPrompt = `You are a productivity assistant that suggests personalized quick actions based on user context.
+    const systemPrompt = `You are a productivity assistant that suggests personalized quick actions based on user context and learned preferences.
 
 Generate 4-6 suggestions in JSON format. Each suggestion must have:
 - label: Short action text (2-5 words)
@@ -148,12 +191,21 @@ Generate 4-6 suggestions in JSON format. Each suggestion must have:
 - data: Object with relevant IDs or config
 
 Priority order:
-1. Active projects that need continuation (type: "project", data: { projectId: "...", stageIndex: number })
-2. If user has templates but no projects AND has worked on similar things 3+ times, suggest creating a project (type: "create_project")
-3. Time-appropriate routines (morning routine in morning, shutdown in evening)
-4. Recently used templates that match current context
-5. Ventures/categories not worked on recently
-6. General productivity actions
+1. PENDING FOLLOW-UPS - If user mentioned something in a past conversation they wanted to do later, suggest it!
+2. Active projects that need continuation (type: "project", data: { projectId: "...", stageIndex: number })
+3. If user has templates but no projects AND has worked on similar things 3+ times, suggest creating a project (type: "create_project")
+4. Time-appropriate routines (morning routine in morning, shutdown in evening)
+5. Recently used templates that match current context
+6. Ventures/categories not worked on recently
+7. General productivity actions
+
+FOLLOW-UP SUGGESTION FORMAT:
+{
+  "label": "Continue with...",
+  "description": "You mentioned wanting to do this earlier",
+  "type": "session",
+  "data": { "followUp": "original mention" }
+}
 
 NEW SUGGESTION TYPE - Use when user might benefit from projects:
 {
@@ -168,10 +220,10 @@ Be creative with labels - don't just say "Continue X", use action verbs like "Sh
     const userPrompt = `User context:
 ${contextParts.join('\n')}
 
-Available templates: ${templates.map(t => `${t.name} (${t.venture})`).join(', ') || 'None'}
-Active projects: ${projects.filter(p => p.status === 'active').length}
+Available templates: ${templates.map((t: { name: string; venture: string }) => `${t.name} (${t.venture})`).join(', ') || 'None'}
+Active projects: ${projects.filter((p: { status: string }) => p.status === 'active').length}
 
-Generate personalized suggestions based on this context.`;
+Generate personalized suggestions based on this context, prioritizing any pending follow-ups.`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -227,6 +279,27 @@ Generate personalized suggestions based on this context.`;
     const aiData = await aiResponse.json();
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     
+    // Update user insights with detected patterns
+    if (sessions.length >= 5) {
+      const avgDuration = sessions.reduce((sum: number, s: { duration_minutes?: number }) => 
+        sum + (s.duration_minutes || 0), 0) / sessions.length;
+      
+      const currentPatterns = (insights?.patterns || {}) as Record<string, unknown>;
+      const updatedPatterns = {
+        ...currentPatterns,
+        avg_session_length: Math.round(avgDuration),
+        most_common_work_type: Object.entries(workTypeCount)
+          .sort((a, b) => b[1] - a[1])[0]?.[0] || null,
+        total_sessions_analyzed: sessions.length,
+      };
+
+      await supabaseService.from('ai_user_insights').upsert({
+        user_id: user.id,
+        patterns: updatedPatterns,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+    }
+    
     if (toolCall?.function?.arguments) {
       const parsed = JSON.parse(toolCall.function.arguments);
       return new Response(JSON.stringify({ suggestions: parsed.suggestions }), {
@@ -247,11 +320,11 @@ Generate personalized suggestions based on this context.`;
   }
 });
 
-function getDefaultSuggestions(projects: any[], templates: any[], timeOfDay: string, suggestProject: boolean) {
-  const suggestions: any[] = [];
+function getDefaultSuggestions(projects: unknown[], templates: unknown[], timeOfDay: string, suggestProject: boolean) {
+  const suggestions: unknown[] = [];
 
   // Add active project suggestions first
-  projects.forEach(p => {
+  (projects as Array<{ status: string; name: string; stages: Array<{ name: string }>; current_stage: number; id: string }>).forEach(p => {
     if (p.status === 'active' && p.stages[p.current_stage]) {
       suggestions.push({
         label: `Continue ${p.name}`,
@@ -290,8 +363,8 @@ function getDefaultSuggestions(projects: any[], templates: any[], timeOfDay: str
   }
 
   // Add template suggestion
-  if (templates.length > 0) {
-    const template = templates[0];
+  if ((templates as Array<{ id: string; name: string; venture: string }>).length > 0) {
+    const template = (templates as Array<{ id: string; name: string; venture: string }>)[0];
     suggestions.push({
       label: `Quick start: ${template.name}`,
       description: `Use your ${template.venture} template`,
@@ -308,5 +381,5 @@ function getDefaultSuggestions(projects: any[], templates: any[], timeOfDay: str
     data: {},
   });
 
-  return suggestions.slice(0, 6);
+  return (suggestions as unknown[]).slice(0, 6);
 }

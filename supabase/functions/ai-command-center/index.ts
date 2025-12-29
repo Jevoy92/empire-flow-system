@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,12 +11,27 @@ interface Message {
   content: string;
 }
 
-const SYSTEM_PROMPT = `You are a helpful AI assistant embedded in a productivity app. Your job is to help users:
+interface ConversationRecord {
+  role: string;
+  content: string;
+  created_at: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface UserInsights {
+  preferences: Record<string, unknown>;
+  patterns: Record<string, unknown>;
+  recent_context: Record<string, unknown>;
+}
+
+const SYSTEM_PROMPT = `You are a helpful AI assistant embedded in a productivity app. You have MEMORY of past conversations and know the user's preferences.
+
+YOUR CAPABILITIES:
+- Remember past conversations and follow up on them
 - Start work sessions
 - Navigate the app
-- Understand when to use Templates vs Projects
+- Guide users on when to use Templates vs Projects
 - Answer questions about their workflow
-- Provide quick help
 
 UNDERSTANDING TEMPLATES VS PROJECTS:
 
@@ -27,7 +43,7 @@ UNDERSTANDING TEMPLATES VS PROJECTS:
 - Use for: launches, campaigns, courses, videos, events, building things
 - Example: "I'm creating a video series" → Project with stages: Planning → Filming → Editing → Publishing
 
-When users describe work that sounds like it has multiple phases or will take several sessions to complete, guide them toward creating a PROJECT on the Workflows page, not just templates.
+When users describe complex, multi-phase work, guide them to create a PROJECT on the Workflows page.
 
 KEY NAVIGATION:
 - Home (/) - Start sessions, see suggestions
@@ -35,17 +51,19 @@ KEY NAVIGATION:
 - Workflows (/workflows) - Create and manage multi-stage PROJECTS
 - Settings (/settings) - App preferences
 
-Current context:
-- The user is on page: {currentPage}
-- The app helps users run focused work sessions with timers and task lists
-- Projects live on the Workflows page and track progress through stages
+CONTEXT AVAILABLE:
+- Current page: {currentPage}
+- Recent conversation history: {recentHistory}
+- User preferences: {userPreferences}
+- Pending follow-ups: {pendingFollowups}
 
 RESPONSE STYLE:
 - Keep responses SHORT and actionable (1-2 sentences max)
+- Reference past conversations when relevant: "Last time you mentioned..."
 - When users want to start a session, acknowledge and guide them
 - When users describe complex work, ask if it's recurring or a multi-phase project
 - When users ask about navigation, tell them how to get there
-- Respond conversationally but stay brief`;
+- Proactively follow up on things user mentioned but didn't complete`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -60,8 +78,63 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Initialize Supabase client for data access
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get user from authorization header
+    const authHeader = req.headers.get('Authorization');
+    let userId: string | null = null;
+    let recentConversations: ConversationRecord[] = [];
+    let userInsights: UserInsights | null = null;
+
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      userId = user?.id || null;
+
+      if (userId) {
+        // Fetch recent conversations for context
+        const { data: conversations } = await supabase
+          .from('ai_conversations')
+          .select('role, content, created_at, metadata')
+          .eq('user_id', userId)
+          .eq('feature', 'command_center')
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        recentConversations = (conversations || []).reverse();
+
+        // Fetch user insights
+        const { data: insights } = await supabase
+          .from('ai_user_insights')
+          .select('preferences, patterns, recent_context')
+          .eq('user_id', userId)
+          .single();
+
+        userInsights = insights;
+      }
+    }
+
+    // Build context strings for the prompt
+    const recentHistoryText = recentConversations.length > 0
+      ? recentConversations.slice(-5).map(c => `${c.role}: ${c.content}`).join('\n')
+      : 'No previous conversations';
+
+    const preferencesText = userInsights?.preferences 
+      ? JSON.stringify(userInsights.preferences)
+      : 'No preferences learned yet';
+
+    const followupsText = userInsights?.recent_context?.pending_items
+      ? JSON.stringify(userInsights.recent_context.pending_items)
+      : 'No pending follow-ups';
+
     const systemPrompt = SYSTEM_PROMPT
-      .replace('{currentPage}', context?.currentPage || '/');
+      .replace('{currentPage}', context?.currentPage || '/')
+      .replace('{recentHistory}', recentHistoryText)
+      .replace('{userPreferences}', preferencesText)
+      .replace('{pendingFollowups}', followupsText);
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -78,7 +151,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages,
-        max_tokens: 200,
+        max_tokens: 250,
       }),
     });
 
@@ -106,6 +179,44 @@ serve(async (req) => {
 
     const data = await response.json();
     const assistantMessage = data.choices?.[0]?.message?.content || "I'm here to help!";
+
+    // Save conversation to database if we have a user
+    if (userId) {
+      // Save user message
+      await supabase.from('ai_conversations').insert({
+        user_id: userId,
+        feature: 'command_center',
+        role: 'user',
+        content: message,
+        metadata: { page: context?.currentPage },
+      });
+
+      // Save assistant response
+      await supabase.from('ai_conversations').insert({
+        user_id: userId,
+        feature: 'command_center',
+        role: 'assistant',
+        content: assistantMessage,
+        metadata: {},
+      });
+
+      // Update recent context with any detected pending items
+      const lowerMessage = message.toLowerCase();
+      if (lowerMessage.includes('later') || lowerMessage.includes('tomorrow') || lowerMessage.includes('remind')) {
+        const currentContext = userInsights?.recent_context || {};
+        const pendingItems = Array.isArray(currentContext.pending_items) ? currentContext.pending_items : [];
+        pendingItems.push({
+          text: message,
+          mentioned_at: new Date().toISOString(),
+        });
+
+        await supabase.from('ai_user_insights').upsert({
+          user_id: userId,
+          recent_context: { ...currentContext, pending_items: pendingItems.slice(-5) },
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+      }
+    }
 
     // Parse for potential actions
     let action = null;

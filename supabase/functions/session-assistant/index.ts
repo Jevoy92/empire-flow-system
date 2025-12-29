@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,6 +18,7 @@ interface Task {
 }
 
 interface SessionContext {
+  sessionId?: string;
   venture: string;
   workType: string;
   focus: string;
@@ -31,7 +33,14 @@ interface SessionContext {
   isProjectSession?: boolean;
 }
 
+interface ConversationRecord {
+  content: string;
+  metadata?: { workType?: string };
+}
+
 const SYSTEM_PROMPT = `You are a focused productivity assistant helping during an active work session. Your job is to help the user stay productive by managing their task list and providing brief encouragement.
+
+You have MEMORY of past sessions and can reference what worked before.
 
 CURRENT SESSION CONTEXT:
 - Venture/Project: {venture}
@@ -42,6 +51,9 @@ CURRENT SESSION CONTEXT:
 {projectContext}
 - Current Tasks:
 {taskList}
+
+PAST SESSION INSIGHTS:
+{pastInsights}
 
 YOUR CAPABILITIES:
 You can take actions on the task list by including ACTION blocks in your response. Available actions:
@@ -60,6 +72,7 @@ You can take actions on the task list by including ACTION blocks in your respons
 
 GUIDELINES:
 - Keep responses SHORT (1-2 sentences max)
+- Reference past sessions when relevant: "Last time you did X, you found Y helpful"
 - Be encouraging but not annoying or overly enthusiastic
 - When adding tasks, make them specific and actionable
 - If user says something is "done" or "finished", complete that task
@@ -67,7 +80,7 @@ GUIDELINES:
 - Match task text loosely - partial matches are fine
 - Don't ask permission to take action - just do it
 - If user seems stuck or distracted, gently redirect to the next smallest step
-- You can suggest without taking action if appropriate
+- Track patterns: if user mentions something worked well or was hard, acknowledge it
 {projectGuidelines}
 
 EXAMPLES:
@@ -100,6 +113,45 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    // Initialize Supabase client for memory
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get user from authorization header
+    const authHeader = req.headers.get('Authorization');
+    let userId: string | null = null;
+    let pastInsights = 'No previous session data';
+
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      userId = user?.id || null;
+
+      if (userId) {
+        // Fetch past conversations for similar work types
+        const { data: pastConversations } = await supabase
+          .from('ai_conversations')
+          .select('content, metadata')
+          .eq('user_id', userId)
+          .eq('feature', 'session_assistant')
+          .order('created_at', { ascending: false })
+          .limit(30);
+
+        // Filter for relevant past insights from similar work
+        if (pastConversations && pastConversations.length > 0) {
+          const relevantConvos = pastConversations.filter((c: ConversationRecord) => {
+            return c.metadata?.workType === sessionContext?.workType;
+          }).slice(0, 5);
+
+          if (relevantConvos.length > 0) {
+            pastInsights = `From past ${sessionContext?.workType} sessions:\n` + 
+              relevantConvos.map((c: ConversationRecord) => `- ${c.content.slice(0, 80)}...`).join('\n');
+          }
+        }
+      }
     }
 
     // Build task list for context
@@ -135,6 +187,7 @@ serve(async (req) => {
       .replace("{elapsedMinutes}", String(sessionContext.elapsedMinutes))
       .replace("{projectContext}", projectContext)
       .replace("{taskList}", taskList)
+      .replace("{pastInsights}", pastInsights)
       .replace("{projectGuidelines}", projectGuidelines);
 
     console.log("Session assistant request:", {
@@ -143,6 +196,7 @@ serve(async (req) => {
       elapsedMinutes: sessionContext.elapsedMinutes,
       isProjectSession: sessionContext.isProjectSession,
       projectName: sessionContext.projectName,
+      hasPastInsights: pastInsights !== 'No previous session data',
     });
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -179,7 +233,79 @@ serve(async (req) => {
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
-    return new Response(response.body, {
+    // Save user message to conversation history
+    const lastUserMessage = messages?.[messages.length - 1];
+    if (userId && lastUserMessage?.role === 'user') {
+      await supabase.from('ai_conversations').insert({
+        user_id: userId,
+        feature: 'session_assistant',
+        role: 'user',
+        content: lastUserMessage.content,
+        metadata: {
+          sessionId: sessionContext.sessionId,
+          workType: sessionContext.workType,
+          venture: sessionContext.venture,
+          projectName: sessionContext.projectName,
+        },
+      });
+    }
+
+    // Stream the response and collect for saving
+    const reader = response.body?.getReader();
+    let fullResponse = '';
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const decoder = new TextDecoder();
+        
+        try {
+          while (true) {
+            const { done, value } = await reader!.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value);
+            controller.enqueue(value);
+            
+            // Parse SSE to collect full response
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+                if (data === '[DONE]') continue;
+                try {
+                  const parsed = JSON.parse(data);
+                  const content = parsed.choices?.[0]?.delta?.content;
+                  if (content) fullResponse += content;
+                } catch {
+                  // Skip invalid JSON
+                }
+              }
+            }
+          }
+          
+          // Save assistant response after streaming completes
+          if (userId && fullResponse) {
+            await supabase.from('ai_conversations').insert({
+              user_id: userId,
+              feature: 'session_assistant',
+              role: 'assistant',
+              content: fullResponse,
+              metadata: {
+                sessionId: sessionContext.sessionId,
+                workType: sessionContext.workType,
+              },
+            });
+          }
+          
+          controller.close();
+        } catch (error) {
+          console.error('Streaming error:', error);
+          controller.error(error);
+        }
+      }
+    });
+
+    return new Response(stream, {
       headers: {
         ...corsHeaders,
         "Content-Type": "text/event-stream",
