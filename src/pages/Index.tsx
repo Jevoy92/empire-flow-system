@@ -3,8 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { HomeScreen } from '@/components/HomeScreen';
 import { SessionSetup } from '@/components/SessionSetup';
 import { LandingPage } from '@/components/LandingPage';
-import { DemoBanner } from '@/components/DemoBanner';
-import { DemoProvider } from '@/contexts/DemoContext';
 import { useAuth } from '@/hooks/useAuth';
 import { VentureId, EnergyLevel } from '@/types/empire';
 import { Loader2 } from 'lucide-react';
@@ -63,8 +61,8 @@ const Index = () => {
     );
   }
 
-  // Authenticated user: show app
-  if (isAuthenticated) {
+  // Authenticated user or demo mode: show app
+  if (isAuthenticated || isDemo) {
     return (
       <div className="min-h-screen bg-background">
         {view === 'home' && (
@@ -77,26 +75,6 @@ const Index = () => {
           </div>
         )}
       </div>
-    );
-  }
-
-  // Demo mode: wrap app with demo provider
-  if (isDemo) {
-    return (
-      <DemoProvider>
-        <div className="min-h-screen bg-background pt-10">
-          <DemoBanner />
-          {view === 'home' && (
-            <HomeScreen onStartSession={() => setView('setup')} />
-          )}
-
-          {view === 'setup' && (
-            <div className="min-h-screen flex items-center justify-center p-8 pb-24">
-              <SessionSetup onLaunch={handleLaunch} onCancel={handleCancel} />
-            </div>
-          )}
-        </div>
-      </DemoProvider>
     );
   }
 
