@@ -8,6 +8,7 @@ import { getCategoryById, getCategoryColor } from '@/data/ventures';
 import { formatDistanceToNow } from 'date-fns';
 import { WorkflowHierarchyExplainer, useShowHierarchyExplainer } from './WorkflowHierarchyExplainer';
 import { useDemo } from '@/contexts/DemoContext';
+import { DailyDigest } from './DailyDigest';
 
 interface Template {
   id: string;
@@ -467,6 +468,9 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
             })}
           </div>
         )}
+
+        {/* Daily Digest */}
+        <DailyDigest />
 
         {/* Greeting */}
         <div className="text-center mb-8">
