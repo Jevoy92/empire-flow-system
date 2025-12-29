@@ -38,7 +38,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       setIsRecording(true);
     } catch (err) {
       console.error('Failed to start recording:', err);
-      setError('Microphone access denied');
+      setError('Microphone access denied. Please allow access in your browser settings.');
     }
   }, []);
 

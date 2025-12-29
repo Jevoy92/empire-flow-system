@@ -141,97 +141,96 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 pb-24 bg-warm-gradient">
       <div className="w-full max-w-md animate-fade-in">
         
-        {/* AI Presence Indicator - Always Pulsing */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="relative w-20 h-20 flex items-center justify-center mb-6">
-            {/* Outer ripple ring */}
-            <div className="absolute inset-0 rounded-full bg-primary/10 animate-ripple" />
-            {/* Middle breathing ring */}
-            <div className="absolute inset-2 rounded-full bg-primary/20 animate-breathe" />
-            {/* Inner glow */}
-            <div className="absolute inset-4 rounded-full bg-primary/30 animate-glow" />
-            {/* Core circle */}
-            <div className="relative w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg">
-              <div className="w-3 h-3 rounded-full bg-primary-foreground animate-pulse-subtle" />
-            </div>
-          </div>
-          
-          {/* Greeting from AI perspective */}
-          <h1 className="text-2xl font-semibold text-foreground text-center mb-1">
+        {/* Greeting */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-semibold text-foreground mb-1">
             {greeting}{firstName ? `, ${firstName}` : ''}.
           </h1>
-          <p className="text-muted-foreground text-center">
+          <p className="text-muted-foreground">
             {contextLine}
           </p>
         </div>
 
-        {/* Voice/Text Input Area */}
+        {/* Primary Voice Input - Large Pulsing Mic Button */}
+        <div className="flex flex-col items-center mb-8">
+          <button
+            onClick={handleMicPress}
+            disabled={isProcessing}
+            className={`relative w-24 h-24 rounded-full flex items-center justify-center transition-all ${
+              isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            {/* Breathing pulse rings - only show when not recording */}
+            {!isRecording && !isProcessing && (
+              <>
+                <div className="absolute inset-0 rounded-full bg-primary/10 animate-ripple" />
+                <div className="absolute inset-2 rounded-full bg-primary/20 animate-breathe" />
+                <div className="absolute inset-4 rounded-full bg-primary/30 animate-glow" />
+              </>
+            )}
+            
+            {/* Recording animation rings */}
+            {isRecording && (
+              <>
+                <div className="absolute inset-0 rounded-full bg-destructive/20 animate-ping" />
+                <div className="absolute inset-2 rounded-full bg-destructive/30 animate-pulse" />
+              </>
+            )}
+            
+            {/* Core button */}
+            <div className={`relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-colors ${
+              isRecording 
+                ? 'bg-destructive' 
+                : 'bg-primary hover:brightness-110'
+            }`}>
+              {isRecording ? (
+                <Square className="w-6 h-6 text-destructive-foreground" />
+              ) : (
+                <Mic className="w-7 h-7 text-primary-foreground" />
+              )}
+            </div>
+          </button>
+          
+          {/* Status text below mic */}
+          <p className="mt-4 text-sm text-muted-foreground">
+            {isRecording && (
+              <span className="flex items-center gap-2 text-destructive">
+                <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                Recording... tap to stop
+              </span>
+            )}
+            {isProcessing && 'Processing audio...'}
+            {!isRecording && !isProcessing && 'Tap to talk'}
+          </p>
+          
+          {/* Error message */}
+          {error && (
+            <p className="mt-2 text-sm text-destructive">
+              {error}
+            </p>
+          )}
+        </div>
+
+        {/* Secondary Text Input */}
         <div className="card-elevated p-4 mb-4">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Type or tap mic to speak..."
+              placeholder="Or type here..."
               className="flex-1 px-4 py-3 rounded-xl bg-secondary/50 text-base focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-secondary transition-colors"
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             />
-            {input.trim() ? (
+            {input.trim() && (
               <button
                 onClick={handleSend}
                 className="p-3 rounded-xl bg-primary text-primary-foreground hover:brightness-105 transition-all"
               >
                 <Send className="w-5 h-5" />
               </button>
-            ) : (
-              <button
-                onClick={handleMicPress}
-                disabled={isProcessing}
-                className={`p-3 rounded-xl transition-all ${
-                  isRecording 
-                    ? 'bg-destructive text-destructive-foreground animate-recording' 
-                    : 'bg-primary text-primary-foreground hover:brightness-105'
-                } ${isProcessing ? 'opacity-50' : ''}`}
-              >
-                {isRecording ? (
-                  <Square className="w-5 h-5" />
-                ) : (
-                  <Mic className="w-5 h-5" />
-                )}
-              </button>
             )}
           </div>
-
-          {/* Recording/Processing Status */}
-          {(isRecording || isProcessing) && (
-            <div className="text-center text-sm text-muted-foreground mb-3">
-              {isRecording && (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-                  Recording... tap to stop
-                </span>
-              )}
-              {isProcessing && 'Processing audio...'}
-            </div>
-          )}
-
-          {error && (
-            <div className="text-center text-sm text-destructive mb-3">
-              {error}
-            </div>
-          )}
-
-          {/* Large Mic Button for Voice-First */}
-          {!input.trim() && !isRecording && (
-            <button
-              onClick={handleMicPress}
-              disabled={isProcessing}
-              className="w-full py-4 rounded-xl bg-secondary/30 text-muted-foreground hover:bg-secondary/50 transition-all flex items-center justify-center gap-2"
-            >
-              <Mic className="w-5 h-5" />
-              Tap to talk
-            </button>
-          )}
 
           {/* Quick Action Chips */}
           <div className="flex flex-wrap gap-2 mt-4">
