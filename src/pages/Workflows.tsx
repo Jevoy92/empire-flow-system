@@ -593,10 +593,22 @@ export default function Workflows() {
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
             <div className="flex items-center gap-2 mb-4">
-              <TabsList className="flex-1">
+            <TabsList className="flex-1">
                 {visibleTabs.map(tab => (
-                  <TabsTrigger key={tab} value={tab} className="flex-1">
+                  <TabsTrigger key={tab} value={tab} className="flex-1 group relative pr-6">
                     {TAB_LABELS[tab]}
+                    {visibleTabs.length > 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hideTab(tab);
+                        }}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-background/50 text-muted-foreground hover:text-foreground transition-opacity"
+                        title={`Hide ${TAB_LABELS[tab]} tab`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -621,19 +633,7 @@ export default function Workflows() {
 
             {visibleTabs.map(tab => (
               <TabsContent key={tab} value={tab}>
-                <div className="relative">
-                  {visibleTabs.length > 1 && (
-                    <button
-                      onClick={() => hideTab(tab)}
-                      className="absolute -top-10 right-12 p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground text-xs flex items-center gap-1"
-                      title={`Hide ${TAB_LABELS[tab]} tab`}
-                    >
-                      <X className="w-3 h-3" />
-                      Hide
-                    </button>
-                  )}
-                  {renderTemplateList(getTemplatesForTab(tab))}
-                </div>
+                {renderTemplateList(getTemplatesForTab(tab))}
               </TabsContent>
             ))}
           </Tabs>
