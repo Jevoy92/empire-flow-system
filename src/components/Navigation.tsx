@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, History, Layout, Settings, Sparkles, FolderOpen } from 'lucide-react';
+import { Home, History, Layers, Settings, Sparkles } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { AICommandCenter } from '@/components/AICommandCenter';
 import { useSession } from '@/contexts/SessionContext';
@@ -16,14 +16,16 @@ export function Navigation() {
     return null;
   }
 
+  const isWorkflowsActive = location.pathname === '/workflows' || location.pathname === '/templates' || location.pathname === '/projects';
+
   return (
     <>
       <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-bottom">
-        <div className="max-w-lg mx-auto flex items-center justify-between px-4 py-2 relative">
+        <div className="max-w-lg mx-auto flex items-center justify-between px-6 py-2 relative">
           {/* Home */}
           <Link
             to="/"
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
               location.pathname === '/'
                 ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'
@@ -36,7 +38,7 @@ export function Navigation() {
           {/* History */}
           <Link
             to="/history"
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
               location.pathname === '/history'
                 ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'
@@ -62,34 +64,23 @@ export function Navigation() {
             </div>
           </button>
 
-          {/* Projects */}
+          {/* Workflows (merged Projects + Templates) */}
           <Link
-            to="/projects"
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
-              location.pathname === '/projects'
+            to="/workflows"
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              isWorkflowsActive
                 ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <FolderOpen className="w-5 h-5" />
-            <span className="text-xs font-medium">Projects</span>
+            <Layers className="w-5 h-5" />
+            <span className="text-xs font-medium">Workflows</span>
           </Link>
 
-          {/* Templates */}
-          <Link
-            to="/templates"
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
-              location.pathname === '/templates'
-                ? 'text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Layout className="w-5 h-5" />
-            <span className="text-xs font-medium">Templates</span>
-          </Link>
+          {/* Settings */}
           <Link
             to="/settings"
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
               location.pathname === '/settings'
                 ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'

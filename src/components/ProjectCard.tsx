@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { ChevronRight, Pause, Play, Check, MoreVertical, Trash2, RotateCcw } from 'lucide-react';
+import { ChevronRight, ChevronDown, Pause, Play, Check, MoreVertical, Trash2, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getCategoryById, getCategoryColor } from '@/data/ventures';
-import { Project, ProjectStage } from '@/pages/Projects';
+import { Project, ProjectStage } from '@/pages/Workflows';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,10 +14,12 @@ interface ProjectCardProps {
   project: Project;
   onContinue: () => void;
   onRefresh: () => void;
+  defaultExpanded?: boolean;
 }
 
-export function ProjectCard({ project, onContinue, onRefresh }: ProjectCardProps) {
+export function ProjectCard({ project, onContinue, onRefresh, defaultExpanded }: ProjectCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded ?? project.status === 'active');
   
   const category = getCategoryById(project.venture);
   const catColor = getCategoryColor(project.venture);
@@ -69,105 +71,182 @@ export function ProjectCard({ project, onContinue, onRefresh }: ProjectCardProps
   const isPaused = project.status === 'paused';
 
   return (
-    <div className={`card-elevated p-5 transition-all ${isPaused ? 'opacity-60' : ''}`}>
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl ${catColor.bg} flex items-center justify-center`}>
+    <div className={`card-elevated transition-all ${isPaused ? 'opacity-60' : ''}`}>
+      {/* Header - Clickable to expand/collapse */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full p-4 flex items-center justify-between text-left hover:bg-secondary/30 transition-colors rounded-t-xl"
+      >
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className={`w-10 h-10 rounded-xl ${catColor.bg} flex items-center justify-center shrink-0`}>
             <span className="text-white text-lg font-semibold">
               {project.name.charAt(0).toUpperCase()}
             </span>
           </div>
-          <div>
-            <h3 className="font-semibold text-foreground">{project.name}</h3>
-            <p className="text-sm text-muted-foreground">
-              {category?.name || project.venture} • Stage {project.current_stage + 1} of {totalStages}
-            </p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-foreground truncate">{project.name}</h3>
+              {isPaused && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600">Paused</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{category?.name || project.venture}</span>
+              <span>•</span>
+              <span>{completedStages}/{totalStages} stages</span>
+              <span>•</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
           </div>
         </div>
         
-        <DropdownMenu>
-          <DropdownMenuTrigger className="p-2 rounded-lg hover:bg-secondary transition-colors">
-            <MoreVertical className="w-4 h-4 text-muted-foreground" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={togglePause} disabled={isUpdating || isCompleted}>
-              {isPaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
-              {isPaused ? 'Resume' : 'Pause'}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={resetProject} disabled={isUpdating}>
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Reset
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={deleteProject} disabled={isUpdating} className="text-destructive">
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="mb-4">
-        <div className="h-2 bg-secondary rounded-full overflow-hidden">
-          <div 
-            className={`h-full transition-all duration-500 ${catColor.bg}`}
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-xs text-muted-foreground mt-1">
-          <span>{completedStages} of {totalStages} stages complete</span>
-          <span>{Math.round(progress)}%</span>
-        </div>
-      </div>
-
-      {/* Stage Pills */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {project.stages.map((stage, idx) => {
-          const isComplete = stage.completed;
-          const isCurrent = idx === project.current_stage && !isCompleted;
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Progress ring */}
+          <div className="relative w-10 h-10">
+            <svg className="w-10 h-10 -rotate-90">
+              <circle
+                cx="20"
+                cy="20"
+                r="16"
+                stroke="currentColor"
+                strokeWidth="3"
+                fill="none"
+                className="text-secondary"
+              />
+              <circle
+                cx="20"
+                cy="20"
+                r="16"
+                stroke="currentColor"
+                strokeWidth="3"
+                fill="none"
+                strokeDasharray={`${progress} 100`}
+                strokeLinecap="round"
+                className={catColor.text}
+              />
+            </svg>
+          </div>
           
-          return (
-            <div
-              key={idx}
-              className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 transition-all ${
-                isComplete
-                  ? 'bg-green-500/20 text-green-600'
-                  : isCurrent
-                    ? `${catColor.light} ${catColor.text} ring-2 ring-offset-1 ring-current`
-                    : 'bg-secondary text-muted-foreground'
-              }`}
-            >
-              {isComplete && <Check className="w-3 h-3" />}
-              {isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
-              {stage.name}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Continue Button */}
-      {!isCompleted && currentStage && (
-        <button
-          onClick={onContinue}
-          disabled={isPaused || isUpdating}
-          className="btn-primary w-full flex items-center justify-center gap-2 group"
-        >
-          {isPaused ? (
-            <>Resume project</>
+          {isExpanded ? (
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
           ) : (
-            <>
-              Continue: {currentStage.name}
-              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
           )}
-        </button>
-      )}
+        </div>
+      </button>
 
-      {isCompleted && (
-        <div className="flex items-center justify-center gap-2 py-3 text-green-600 bg-green-500/10 rounded-lg">
-          <Check className="w-5 h-5" />
-          <span className="font-medium">Project Complete</span>
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="px-4 pb-4 border-t border-border/50">
+          {/* Stages List */}
+          <div className="py-4 space-y-2">
+            {project.stages.map((stage, idx) => {
+              const isComplete = stage.completed;
+              const isCurrent = idx === project.current_stage && !isCompleted;
+              const stageColor = getCategoryColor(stage.venture || project.venture);
+              
+              return (
+                <div
+                  key={idx}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
+                    isCurrent 
+                      ? `${stageColor.light} border border-current ${stageColor.text}` 
+                      : isComplete 
+                        ? 'bg-green-500/10' 
+                        : 'bg-secondary/50'
+                  }`}
+                >
+                  {/* Status indicator */}
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                    isComplete 
+                      ? 'bg-green-500 text-white' 
+                      : isCurrent 
+                        ? `${stageColor.bg} text-white` 
+                        : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {isComplete ? (
+                      <Check className="w-3.5 h-3.5" />
+                    ) : isCurrent ? (
+                      <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                    ) : (
+                      <span className="text-xs font-medium">{idx + 1}</span>
+                    )}
+                  </div>
+                  
+                  {/* Stage info */}
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-medium truncate ${
+                      isComplete ? 'text-green-600' : isCurrent ? stageColor.text : 'text-muted-foreground'
+                    }`}>
+                      {stage.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {stage.work_type}
+                    </p>
+                  </div>
+                  
+                  {/* Continue button for current stage */}
+                  {isCurrent && !isPaused && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onContinue();
+                      }}
+                      className="btn-primary text-sm py-1.5 px-3 flex items-center gap-1 shrink-0"
+                    >
+                      Continue
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+            {isPaused && (
+              <button
+                onClick={togglePause}
+                disabled={isUpdating}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Play className="w-4 h-4" />
+                Resume Project
+              </button>
+            )}
+            
+            {!isPaused && !isCompleted && (
+              <div /> // Spacer
+            )}
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger className="p-2 rounded-lg hover:bg-secondary transition-colors">
+                <MoreVertical className="w-4 h-4 text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={togglePause} disabled={isUpdating || isCompleted}>
+                  {isPaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
+                  {isPaused ? 'Resume' : 'Pause'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={resetProject} disabled={isUpdating}>
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Reset
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={deleteProject} disabled={isUpdating} className="text-destructive">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {isCompleted && (
+            <div className="flex items-center justify-center gap-2 py-3 text-green-600 bg-green-500/10 rounded-lg mt-2">
+              <Check className="w-5 h-5" />
+              <span className="font-medium">Project Complete</span>
+            </div>
+          )}
         </div>
       )}
     </div>
