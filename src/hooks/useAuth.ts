@@ -97,9 +97,12 @@ export function useAuth() {
 
     // Refresh session when window regains focus (prevents "locking out")
     const handleFocus = () => {
-      if (session) {
-        refreshSession();
-      }
+      // Check if we have a session before refreshing
+      supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+        if (currentSession) {
+          refreshSession();
+        }
+      });
     };
     window.addEventListener('focus', handleFocus);
 
@@ -107,7 +110,7 @@ export function useAuth() {
       subscription.unsubscribe();
       window.removeEventListener('focus', handleFocus);
     };
-  }, [initialized, refreshSession, session]);
+  }, [initialized, refreshSession]);
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase

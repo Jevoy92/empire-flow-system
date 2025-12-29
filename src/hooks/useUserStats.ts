@@ -106,9 +106,20 @@ export function useUserStats() {
     await fetchStats();
   }, [fetchStats]);
 
+  // Fetch stats on mount and check for new achievements
   useEffect(() => {
-    fetchStats();
+    const initStats = async () => {
+      await fetchStats();
+    };
+    initStats();
   }, [fetchStats]);
+
+  // Check for new achievements whenever stats change
+  useEffect(() => {
+    if (!loading && user?.id && stats.total_sessions_completed > 0) {
+      checkForNewAchievements();
+    }
+  }, [loading, user?.id, stats, checkForNewAchievements]);
 
   // Subscribe to realtime updates
   useEffect(() => {
