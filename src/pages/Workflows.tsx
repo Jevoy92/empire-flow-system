@@ -484,10 +484,11 @@ export default function Workflows() {
         </div>
 
         {/* Hierarchy Explainer - for new users or empty state */}
-        {showHierarchyExplainer && templates.length === 0 && projects.length === 0 && (
-          <div className="mb-6">
-            <WorkflowHierarchyExplainer onDismiss={dismissHierarchyExplainer} />
-          </div>
+        {templates.length === 0 && projects.length === 0 && (
+          <WorkflowHierarchyExplainer 
+            isOpen={showHierarchyExplainer} 
+            onDismiss={dismissHierarchyExplainer} 
+          />
         )}
 
         {/* Active Multi-Stage Projects Section */}
