@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, Loader2, LogOut, Save, User } from 'lucide-react';
+import { ArrowLeft, Loader2, LogOut, Save, User, Trophy } from 'lucide-react';
+import AchievementsPanel from '@/components/AchievementsPanel';
 import {
   Select,
   SelectContent,
@@ -157,6 +158,15 @@ export default function Settings() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Your Journey Section */}
+          <div className="card-elevated p-6">
+            <h2 className="text-lg font-medium text-foreground mb-4 flex items-center gap-2">
+              <Trophy className="w-5 h-5" />
+              Your Journey
+            </h2>
+            <AchievementsPanel />
           </div>
 
           {/* Preferences Section */}
