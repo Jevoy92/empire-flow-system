@@ -2,13 +2,17 @@ import { useState } from 'react';
 import { Home, History, Layout, Settings, Sparkles } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { AICommandCenter } from '@/components/AICommandCenter';
+import { useSession } from '@/contexts/SessionContext';
 
 export function Navigation() {
   const location = useLocation();
   const [isAIOpen, setIsAIOpen] = useState(false);
+  const { isActive, isMinimized } = useSession();
 
-  // Hide navigation during active session or onboarding
-  if (location.pathname === '/session' || location.pathname === '/onboarding' || location.pathname === '/auth') {
+  // Hide navigation during active full-screen session, onboarding, or auth
+  // Show navigation if session is minimized
+  const isFullScreenSession = location.pathname === '/session' && isActive && !isMinimized;
+  if (isFullScreenSession || location.pathname === '/onboarding' || location.pathname === '/auth') {
     return null;
   }
 
