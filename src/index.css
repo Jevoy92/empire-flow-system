@@ -238,23 +238,14 @@
     animation: recordingPulse 1s ease-in-out infinite;
   }
 
-  /* Warm gradient background */
+  /* Solid background utilities */
   .bg-warm-gradient {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--background)) 0%,
-      hsl(var(--background)) 60%,
-      hsl(35 40% 96%) 100%
-    );
+    background-color: hsl(var(--background));
   }
 
   /* Session warm background */
   .bg-session-warm {
-    background: linear-gradient(
-      180deg,
-      hsl(var(--session-warm)) 0%,
-      hsl(var(--background)) 100%
-    );
+    background-color: hsl(var(--session-warm));
   }
 }
 

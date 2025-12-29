@@ -115,7 +115,7 @@ export default function AchievementsPanel() {
   return (
     <div className="space-y-6">
       {/* Overall Progress */}
-      <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+      <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-primary" />
