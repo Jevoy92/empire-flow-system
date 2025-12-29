@@ -31,6 +31,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   const navigate = useNavigate();
   const ventureData = ventures.find(v => v.id === venture);
   const categoryData = getCategoryById(venture);
+  const ventureLabel = ventureData?.name || categoryData?.name || venture;
   const [totalVentureMinutes, setTotalVentureMinutes] = useState(0);
   const [celebratingTaskId, setCelebratingTaskId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -272,12 +273,12 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-xl ${getCategoryColor()} flex items-center justify-center`}>
             <span className="text-white text-lg font-semibold">
-              {(ventureData?.name || categoryData?.name || 'W')[0]}
+              {(ventureLabel || 'W')[0]}
             </span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm text-muted-foreground">
-              {ventureData?.name || categoryData?.name} • {workType}
+              {ventureLabel} • {workType}
             </div>
             <div className="font-medium text-foreground truncate">{focus}</div>
           </div>

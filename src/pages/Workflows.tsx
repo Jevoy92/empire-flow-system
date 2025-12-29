@@ -7,6 +7,7 @@ import { ProjectCreateModal } from '@/components/ProjectCreateModal';
 import { ProjectCard } from '@/components/ProjectCard';
 import { WorkflowHierarchyExplainer, useShowHierarchyExplainer } from '@/components/WorkflowHierarchyExplainer';
 import { categories, getCategoryById, CategoryType, getCategoryColor } from '@/data/ventures';
+import { useUserVentures } from '@/hooks/useUserVentures';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   DropdownMenu,
@@ -82,6 +83,7 @@ export default function Workflows() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { ventures: userVentures } = useUserVentures();
   const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer();
   const demo = useDemo();
   
@@ -343,25 +345,38 @@ export default function Workflows() {
     });
   };
 
-  // Split templates by type
+  // Split templates by type (user-defined ventures first, then legacy hardcoded categories)
+  const ventureTypeByName = useMemo(() => {
+    const map = new Map<string, CategoryType>();
+
+    // User-defined ventures use the venture *name* as the template.venture value
+    userVentures.forEach(v => map.set(v.name, v.type));
+
+    // Legacy hardcoded categories use the category *id* as the template.venture value
+    categories.forEach(c => map.set(c.id, c.type));
+
+    return map;
+  }, [userVentures]);
+
   const { personalTemplates, projectTemplatesFiltered, businessTemplates } = useMemo(() => {
     const personal: Template[] = [];
     const project: Template[] = [];
     const business: Template[] = [];
-    
+
     templates.forEach(template => {
-      const category = getCategoryById(template.venture);
-      if (category?.type === 'personal') {
+      const type = ventureTypeByName.get(template.venture) ?? getCategoryById(template.venture)?.type;
+
+      if (type === 'personal') {
         personal.push(template);
-      } else if (category?.type === 'project') {
+      } else if (type === 'project') {
         project.push(template);
       } else {
         business.push(template);
       }
     });
-    
+
     return { personalTemplates: personal, projectTemplatesFiltered: project, businessTemplates: business };
-  }, [templates]);
+  }, [templates, ventureTypeByName]);
 
   const getTemplatesForTab = (tab: TabType) => {
     switch (tab) {
