@@ -9,6 +9,7 @@ import { MiniSession } from "@/components/MiniSession";
 import Index from "./pages/Index";
 import History from "./pages/History";
 import Templates from "./pages/Templates";
+import Projects from "./pages/Projects";
 import Session from "./pages/Session";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/history" element={<History />} />
             <Route path="/templates" element={<Templates />} />
+            <Route path="/projects" element={<Projects />} />
             <Route path="/session" element={<Session />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />

@@ -85,6 +85,84 @@ export type Database = {
         }
         Relationships: []
       }
+      project_templates: {
+        Row: {
+          created_at: string
+          default_venture: string
+          description: string | null
+          id: string
+          name: string
+          stages: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_venture: string
+          description?: string | null
+          id?: string
+          name: string
+          stages?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_venture?: string
+          description?: string | null
+          id?: string
+          name?: string
+          stages?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_stage: number
+          description: string | null
+          id: string
+          name: string
+          project_template_id: string | null
+          stages: Json
+          status: string
+          updated_at: string
+          user_id: string
+          venture: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_stage?: number
+          description?: string | null
+          id?: string
+          name: string
+          project_template_id?: string | null
+          stages?: Json
+          status?: string
+          updated_at?: string
+          user_id: string
+          venture: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_stage?: number
+          description?: string | null
+          id?: string
+          name?: string
+          project_template_id?: string | null
+          stages?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string
+          venture?: string
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           completed_at: string | null
@@ -93,6 +171,8 @@ export type Database = {
           duration_minutes: number | null
           focus: string
           id: string
+          project_id: string | null
+          stage_index: number | null
           started_at: string
           status: string
           tasks: Json | null
@@ -107,6 +187,8 @@ export type Database = {
           duration_minutes?: number | null
           focus: string
           id?: string
+          project_id?: string | null
+          stage_index?: number | null
           started_at?: string
           status?: string
           tasks?: Json | null
@@ -121,6 +203,8 @@ export type Database = {
           duration_minutes?: number | null
           focus?: string
           id?: string
+          project_id?: string | null
+          stage_index?: number | null
           started_at?: string
           status?: string
           tasks?: Json | null
@@ -128,7 +212,15 @@ export type Database = {
           venture?: string
           work_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       templates: {
         Row: {
