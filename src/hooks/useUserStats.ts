@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { UserStats, achievements, isAchievementUnlocked } from '@/data/achievements';
@@ -23,6 +23,7 @@ export function useUserStats() {
   const [stats, setStats] = useState<UserStats>(defaultStats);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasCheckedAchievements = useRef(false);
 
   const fetchStats = useCallback(async () => {
     if (!user?.id) {
@@ -41,7 +42,7 @@ export function useUserStats() {
       if (fetchError) throw fetchError;
 
       if (data) {
-        setStats({
+        const newStats = {
           total_sessions_completed: data.total_sessions_completed,
           total_tasks_completed: data.total_tasks_completed,
           total_minutes_worked: data.total_minutes_worked,
@@ -54,7 +55,14 @@ export function useUserStats() {
           last_session_date: data.last_session_date,
           achievements_unlocked: data.achievements_unlocked || [],
           projects_completed: data.projects_completed ?? 0,
-        });
+        };
+        setStats(newStats);
+        
+        // Check for new achievements after fetching stats
+        if (!hasCheckedAchievements.current && newStats.total_sessions_completed > 0) {
+          hasCheckedAchievements.current = true;
+          checkAndUpdateAchievements(newStats, user.id);
+        }
       } else {
         // Create stats record if it doesn't exist
         const { error: insertError } = await supabase
@@ -74,24 +82,23 @@ export function useUserStats() {
     }
   }, [user?.id]);
 
-  const checkForNewAchievements = useCallback(async (): Promise<string[]> => {
-    if (!user?.id) return [];
-
+  // Separate function to check achievements (not a hook dependency)
+  const checkAndUpdateAchievements = async (currentStats: UserStats, userId: string) => {
     const newlyUnlocked: string[] = [];
     
     for (const achievement of achievements) {
-      if (isAchievementUnlocked(stats, achievement) && !stats.achievements_unlocked.includes(achievement.id)) {
+      if (isAchievementUnlocked(currentStats, achievement) && !currentStats.achievements_unlocked.includes(achievement.id)) {
         newlyUnlocked.push(achievement.id);
       }
     }
 
     if (newlyUnlocked.length > 0) {
-      const updatedUnlocked = [...stats.achievements_unlocked, ...newlyUnlocked];
+      const updatedUnlocked = [...currentStats.achievements_unlocked, ...newlyUnlocked];
       
       await supabase
         .from('user_stats')
         .update({ achievements_unlocked: updatedUnlocked })
-        .eq('id', user.id);
+        .eq('id', userId);
 
       setStats(prev => ({
         ...prev,
@@ -100,26 +107,22 @@ export function useUserStats() {
     }
 
     return newlyUnlocked;
+  };
+
+  const checkForNewAchievements = useCallback(async (): Promise<string[]> => {
+    if (!user?.id) return [];
+    return checkAndUpdateAchievements(stats, user.id);
   }, [user?.id, stats]);
 
   const refreshStats = useCallback(async () => {
+    hasCheckedAchievements.current = false;
     await fetchStats();
   }, [fetchStats]);
 
-  // Fetch stats on mount and check for new achievements
+  // Fetch stats on mount
   useEffect(() => {
-    const initStats = async () => {
-      await fetchStats();
-    };
-    initStats();
+    fetchStats();
   }, [fetchStats]);
-
-  // Check for new achievements whenever stats change
-  useEffect(() => {
-    if (!loading && user?.id && stats.total_sessions_completed > 0) {
-      checkForNewAchievements();
-    }
-  }, [loading, user?.id, stats, checkForNewAchievements]);
 
   // Subscribe to realtime updates
   useEffect(() => {
