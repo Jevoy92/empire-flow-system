@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UseVoiceRecorderReturn {
   isRecording: boolean;
@@ -30,13 +31,17 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
         const base64Audio = (reader.result as string).split(',')[1];
         
         try {
+          // Get user's actual session token for authentication
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          
           const response = await fetch(
             `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/voice-to-text`,
             {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({ audio: base64Audio }),
             }

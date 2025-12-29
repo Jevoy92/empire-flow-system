@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, ChevronUp, ChevronDown, Mic, Square, MessageCircle, ListPlus } from 'lucide-react';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 
 // Schema validation for AI-generated task actions
@@ -140,13 +141,17 @@ export function SessionAssistant({
     setIsExpanded(true);
 
     try {
+      // Get user's actual session token for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/session-assistant`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             messages: newMessages,
