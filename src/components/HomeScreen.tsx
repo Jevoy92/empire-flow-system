@@ -62,7 +62,14 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
   const [input, setInput] = useState('');
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { isRecording, isProcessing, startRecording, stopRecording, error } = useVoiceRecorder();
+  const { isRecording, isProcessing, partialText, startRecording, stopRecording, error } = useVoiceRecorder();
+
+  // Update input with partial text as user speaks
+  useEffect(() => {
+    if (isRecording && partialText) {
+      setInput(partialText);
+    }
+  }, [partialText, isRecording]);
 
   useEffect(() => {
     loadRecentTemplates();
@@ -193,13 +200,13 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
           
           {/* Status text below mic */}
           <p className="mt-4 text-sm text-muted-foreground">
-            {isRecording && (
+          {isRecording && (
               <span className="flex items-center gap-2 text-destructive">
                 <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-                Recording... tap to stop
+                {partialText ? 'Listening... tap to finish' : 'Listening... speak now'}
               </span>
             )}
-            {isProcessing && 'Processing audio...'}
+            {isProcessing && 'Finalizing...'}
             {!isRecording && !isProcessing && 'Tap to talk'}
           </p>
           
