@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { UserStats } from '@/data/achievements';
 import { CheckCircle2, Clock, Flame, FolderKanban, Calendar, TrendingUp, Zap, Target, Award, Loader2 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, subDays, startOfDay, endOfDay } from 'date-fns';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 
 type StatType = 'sessions' | 'time' | 'streak' | 'projects';
 
@@ -15,14 +16,24 @@ interface StatDetailSheetProps {
   stats: UserStats;
 }
 
+interface DailyData {
+  day: string;
+  shortDay: string;
+  sessions: number;
+  minutes: number;
+  isToday: boolean;
+}
+
 interface DetailedSessionData {
   firstSessionDate: string | null;
   lastSessionDate: string | null;
   ventureBreakdown: Record<string, number>;
   workTypeBreakdown: Record<string, number>;
   sessionsThisWeek: number;
+  minutesThisWeek: number;
   longestSession: number;
   averageSessionLength: number;
+  dailyData: DailyData[];
 }
 
 function DetailCard({ label, value, icon }: { label: string; value: string | number; icon?: React.ReactNode }) {
@@ -33,6 +44,50 @@ function DetailCard({ label, value, icon }: { label: string; value: string | num
         <span className="text-xs text-muted-foreground">{label}</span>
       </div>
       <p className="text-lg font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function WeeklyChart({ data, dataKey, color }: { data: DailyData[]; dataKey: 'sessions' | 'minutes'; color: string }) {
+  const maxValue = Math.max(...data.map(d => d[dataKey]), 1);
+  
+  return (
+    <div className="p-4 rounded-xl bg-muted/30 border border-border/50 mb-4">
+      <h4 className="text-sm font-medium text-foreground mb-3">
+        Last 7 Days
+      </h4>
+      <div className="h-32">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+            <XAxis 
+              dataKey="shortDay" 
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+            />
+            <YAxis 
+              hide 
+              domain={[0, maxValue * 1.1]}
+            />
+            <Bar 
+              dataKey={dataKey} 
+              radius={[4, 4, 0, 0]}
+              maxBarSize={32}
+            >
+              {data.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`}
+                  fill={entry.isToday ? color : `${color}60`}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+        <span>{data[0]?.day}</span>
+        <span>Today</span>
+      </div>
     </div>
   );
 }
@@ -60,15 +115,40 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
         .eq('status', 'completed')
         .order('started_at', { ascending: true });
 
+      // Generate last 7 days data
+      const today = new Date();
+      const dailyData: DailyData[] = [];
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = subDays(today, i);
+        const dayStart = startOfDay(date);
+        const dayEnd = endOfDay(date);
+        
+        const daySessions = sessions?.filter(s => {
+          const sessionDate = new Date(s.started_at);
+          return sessionDate >= dayStart && sessionDate <= dayEnd;
+        }) || [];
+        
+        const dayMinutes = daySessions.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+        
+        dailyData.push({
+          day: format(date, 'MMM d'),
+          shortDay: format(date, 'EEE'),
+          sessions: daySessions.length,
+          minutes: dayMinutes,
+          isToday: i === 0,
+        });
+      }
+
       if (sessions && sessions.length > 0) {
         const ventureBreakdown: Record<string, number> = {};
         const workTypeBreakdown: Record<string, number> = {};
         let totalDuration = 0;
         let longestSession = 0;
         
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
+        const weekAgo = subDays(today, 7);
         let sessionsThisWeek = 0;
+        let minutesThisWeek = 0;
 
         sessions.forEach(session => {
           // Venture breakdown
@@ -85,6 +165,7 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
           // Sessions this week
           if (new Date(session.started_at) >= weekAgo) {
             sessionsThisWeek++;
+            minutesThisWeek += duration;
           }
         });
 
@@ -94,8 +175,10 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
           ventureBreakdown,
           workTypeBreakdown,
           sessionsThisWeek,
+          minutesThisWeek,
           longestSession,
           averageSessionLength: sessions.length > 0 ? Math.round(totalDuration / sessions.length) : 0,
+          dailyData,
         });
       } else {
         setDetailedData({
@@ -104,8 +187,10 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
           ventureBreakdown: {},
           workTypeBreakdown: {},
           sessionsThisWeek: 0,
+          minutesThisWeek: 0,
           longestSession: 0,
           averageSessionLength: 0,
+          dailyData,
         });
       }
     } catch (error) {
@@ -136,6 +221,7 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
           bgColor: 'bg-emerald-500/10',
           heroValue: stats.total_sessions_completed,
           heroLabel: 'Sessions Completed',
+          chartColor: 'hsl(142, 76%, 36%)', // emerald-500
         };
       case 'time':
         return {
@@ -144,6 +230,7 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
           bgColor: 'bg-blue-500/10',
           heroValue: formatTime(stats.total_minutes_worked),
           heroLabel: 'Total Focus Time',
+          chartColor: 'hsl(217, 91%, 60%)', // blue-500
         };
       case 'streak':
         return {
@@ -152,6 +239,7 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
           bgColor: 'bg-orange-500/10',
           heroValue: stats.current_streak,
           heroLabel: 'Current Streak',
+          chartColor: 'hsl(25, 95%, 53%)', // orange-500
         };
       case 'projects':
         return {
@@ -160,6 +248,7 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
           bgColor: 'bg-violet-500/10',
           heroValue: stats.projects_completed,
           heroLabel: 'Projects Completed',
+          chartColor: 'hsl(263, 70%, 50%)', // violet-500
         };
     }
   };
@@ -179,6 +268,27 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
       case 'sessions':
         return (
           <>
+            {/* Weekly Chart */}
+            {detailedData?.dailyData && (
+              <WeeklyChart 
+                data={detailedData.dailyData} 
+                dataKey="sessions" 
+                color={config.chartColor}
+              />
+            )}
+            
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <DetailCard
+                label="This Week"
+                value={`${detailedData?.sessionsThisWeek || 0} sessions`}
+                icon={<TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />}
+              />
+              <DetailCard
+                label="Tasks Done"
+                value={stats.total_tasks_completed}
+                icon={<Target className="w-3.5 h-3.5 text-muted-foreground" />}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <DetailCard
                 label="First Session"
@@ -191,18 +301,6 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
                   ? formatDistanceToNow(new Date(detailedData.lastSessionDate), { addSuffix: true })
                   : 'N/A'}
                 icon={<Clock className="w-3.5 h-3.5 text-muted-foreground" />}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <DetailCard
-                label="This Week"
-                value={`${detailedData?.sessionsThisWeek || 0} sessions`}
-                icon={<TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />}
-              />
-              <DetailCard
-                label="Tasks Done"
-                value={stats.total_tasks_completed}
-                icon={<Target className="w-3.5 h-3.5 text-muted-foreground" />}
               />
             </div>
             {detailedData && Object.keys(detailedData.ventureBreakdown).length > 0 && (
@@ -232,11 +330,20 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
         
         return (
           <>
+            {/* Weekly Chart */}
+            {detailedData?.dailyData && (
+              <WeeklyChart 
+                data={detailedData.dailyData} 
+                dataKey="minutes" 
+                color={config.chartColor}
+              />
+            )}
+            
             <div className="grid grid-cols-2 gap-3 mb-4">
               <DetailCard
-                label="Average Session"
-                value={formatTime(detailedData?.averageSessionLength || 0)}
-                icon={<Clock className="w-3.5 h-3.5 text-muted-foreground" />}
+                label="This Week"
+                value={formatTime(detailedData?.minutesThisWeek || 0)}
+                icon={<TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />}
               />
               <DetailCard
                 label="Longest Session"
@@ -246,14 +353,14 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
             </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <DetailCard
+                label="Average Session"
+                value={formatTime(detailedData?.averageSessionLength || 0)}
+                icon={<Clock className="w-3.5 h-3.5 text-muted-foreground" />}
+              />
+              <DetailCard
                 label="Total Sessions"
                 value={stats.total_sessions_completed}
                 icon={<CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground" />}
-              />
-              <DetailCard
-                label="Tasks Completed"
-                value={stats.total_tasks_completed}
-                icon={<Target className="w-3.5 h-3.5 text-muted-foreground" />}
               />
             </div>
             <div className="p-4 rounded-xl bg-muted/30 border border-border/50 text-center">
@@ -271,8 +378,18 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
           ? "Great consistency! You're building a habit."
           : "Nice start! Keep showing up daily.";
         
+        // Show activity chart for streak view
         return (
           <>
+            {/* Weekly Activity Chart */}
+            {detailedData?.dailyData && (
+              <WeeklyChart 
+                data={detailedData.dailyData} 
+                dataKey="sessions" 
+                color={config.chartColor}
+              />
+            )}
+            
             <div className="grid grid-cols-2 gap-3 mb-4">
               <DetailCard
                 label="Longest Streak"
@@ -354,7 +471,7 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl">
+      <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl overflow-y-auto">
         <SheetHeader className="mb-4">
           <SheetTitle className="flex items-center gap-2">
             {config.icon}
