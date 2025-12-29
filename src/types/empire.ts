@@ -1,4 +1,4 @@
-export type VentureId = 'palmer-house' | 'besettld' | 'yourboy' | 'strinzees';
+export type VentureId = string;
 
 export interface Venture {
   id: VentureId;

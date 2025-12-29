@@ -35,6 +35,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   const [celebratingTaskId, setCelebratingTaskId] = useState<string | null>(null);
   const { toast } = useToast();
   const prevCompletedCountRef = useRef(0);
+  const tasksRef = useRef<Task[]>([]);
   
   const { 
     elapsedSeconds, 
@@ -131,7 +132,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
         // Auto-complete for task-based sessions after a short delay
         if (completionCondition === 'task-based') {
           setTimeout(() => {
-            onComplete(tasks);
+            onComplete(tasksRef.current);
           }, 1500);
         }
       }
@@ -139,6 +140,11 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
     
     prevCompletedCountRef.current = completedCount;
   }, [completedCount, tasks.length, toast, completionCondition, onComplete, tasks]);
+
+  // Keep tasksRef in sync for use in closures
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
 
   // Notify parent and context of task changes
   useEffect(() => {

@@ -476,11 +476,36 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
   // Request more templates from AI
   const handleGenerateMore = async () => {
     const prompt = "Generate more templates based on what I've told you. Give me additional focus templates for other activities or variations of the ones you already created.";
-    setInput(prompt);
-    // Trigger send after a short delay to allow state update
-    setTimeout(() => {
-      handleSend();
-    }, 100);
+    
+    // Send directly with prompt to avoid race condition
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: prompt,
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+
+    try {
+      const history = [...messages, userMessage].map(m => ({
+        role: m.role,
+        content: m.content + 
+          (m.ventures?.map(v => `[VENTURE]${JSON.stringify(v)}[/VENTURE]`).join('') || '') +
+          (m.templates?.map(t => `[TEMPLATE]${JSON.stringify(t)}[/TEMPLATE]`).join('') || '') +
+          (m.projects?.map(p => `[PROJECT]${JSON.stringify(p)}[/PROJECT]`).join('') || ''),
+      }));
+
+      await streamMessage(history);
+    } catch (error) {
+      console.error('Failed to generate more:', error);
+      setIsLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to generate more templates',
+      });
+    }
   };
 
   // Count pending items
