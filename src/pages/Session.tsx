@@ -105,50 +105,54 @@ export default function Session() {
   }, [location.state, navigate, isActive, isMinimized, sessionConfig, startSession, restoreSession]);
 
   const handleSessionComplete = async (completedTasks: Task[]) => {
+    // Set view to shutdown FIRST, before any async operations
+    setView('shutdown');
     setSessionTasks(completedTasks);
     const state = location.state as LocationState | null;
     
     if (sessionId && startTime) {
       const durationMinutes = Math.round((new Date().getTime() - startTime.getTime()) / 60000);
-      await supabase
-        .from('sessions')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          tasks: JSON.parse(JSON.stringify(completedTasks)) as Json,
-          duration_minutes: durationMinutes,
-        })
-        .eq('id', sessionId);
+      try {
+        await supabase
+          .from('sessions')
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            tasks: JSON.parse(JSON.stringify(completedTasks)) as Json,
+            duration_minutes: durationMinutes,
+          })
+          .eq('id', sessionId);
 
-      // Advance project stage if this session is part of a project
-      if (state?.projectId !== undefined && state?.stageIndex !== undefined) {
-        const { data: project } = await supabase
-          .from('projects')
-          .select('stages, current_stage')
-          .eq('id', state.projectId)
-          .single();
-
-        if (project && Array.isArray(project.stages)) {
-          const stages = project.stages as any[];
-          stages[state.stageIndex] = { ...stages[state.stageIndex], completed: true };
-          
-          const nextStage = state.stageIndex + 1;
-          const isProjectComplete = nextStage >= stages.length;
-
-          await supabase
+        // Advance project stage if this session is part of a project
+        if (state?.projectId !== undefined && state?.stageIndex !== undefined) {
+          const { data: project } = await supabase
             .from('projects')
-            .update({
-              stages,
-              current_stage: isProjectComplete ? state.stageIndex : nextStage,
-              status: isProjectComplete ? 'completed' : 'active',
-              completed_at: isProjectComplete ? new Date().toISOString() : null,
-            })
-            .eq('id', state.projectId);
+            .select('stages, current_stage')
+            .eq('id', state.projectId)
+            .single();
+
+          if (project && Array.isArray(project.stages)) {
+            const stages = project.stages as any[];
+            stages[state.stageIndex] = { ...stages[state.stageIndex], completed: true };
+            
+            const nextStage = state.stageIndex + 1;
+            const isProjectComplete = nextStage >= stages.length;
+
+            await supabase
+              .from('projects')
+              .update({
+                stages,
+                current_stage: isProjectComplete ? state.stageIndex : nextStage,
+                status: isProjectComplete ? 'completed' : 'active',
+                completed_at: isProjectComplete ? new Date().toISOString() : null,
+              })
+              .eq('id', state.projectId);
+          }
         }
+      } catch (error) {
+        console.error('Error completing session:', error);
       }
     }
-    
-    setView('shutdown');
   };
 
   // Handle real-time task updates for persistence
@@ -207,7 +211,8 @@ export default function Session() {
 
   // Auth check handled by ProtectedRoute
 
-  if (!sessionConfig || !startTime) {
+  // Only return null if we're not in shutdown view and session isn't configured
+  if (view !== 'shutdown' && (!sessionConfig || !startTime)) {
     return null;
   }
 
