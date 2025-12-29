@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Play } from 'lucide-react';
+import { ArrowRight, Play, Mic, Send, Square } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 
 interface Template {
   id: string;
@@ -31,16 +32,16 @@ const ventureColors: Record<string, string> = {
 
 const getGreeting = (): string => {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Morning';
-  if (hour < 17) return 'Afternoon';
-  return 'Evening';
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 };
 
 const getContextLine = (): string => {
   const lines = [
-    'Ready when you are.',
-    'What needs your focus?',
-    'Let\'s get something done.',
+    "What's on your mind?",
+    "What needs your focus today?",
+    "How can I help?",
   ];
   return lines[Math.floor(Math.random() * lines.length)];
 };
@@ -49,22 +50,22 @@ const getVentureColor = (venture: string): string => {
   return ventureColors[venture] || 'bg-primary';
 };
 
+const quickActions = [
+  { label: 'Start a work session', action: 'session' },
+  { label: "What did I do yesterday?", action: 'history' },
+];
+
 export function HomeScreen({ onStartSession }: HomeScreenProps) {
   const [recentTemplates, setRecentTemplates] = useState<Template[]>([]);
-  const [greeting, setGreeting] = useState(getGreeting());
+  const [greeting] = useState(getGreeting());
   const [contextLine] = useState(getContextLine());
+  const [input, setInput] = useState('');
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const { isRecording, isProcessing, startRecording, stopRecording, error } = useVoiceRecorder();
 
   useEffect(() => {
     loadRecentTemplates();
-    
-    // Update greeting every minute
-    const interval = setInterval(() => {
-      setGreeting(getGreeting());
-    }, 60000);
-    
-    return () => clearInterval(interval);
   }, []);
 
   const loadRecentTemplates = async () => {
@@ -106,31 +107,158 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     });
   };
 
+  const handleMicPress = async () => {
+    if (isRecording) {
+      const text = await stopRecording();
+      if (text) {
+        setInput(text);
+      }
+    } else {
+      await startRecording();
+    }
+  };
+
+  const handleQuickAction = (action: string) => {
+    if (action === 'session') {
+      onStartSession();
+    } else if (action === 'history') {
+      navigate('/history');
+    }
+  };
+
+  const handleSend = () => {
+    if (input.toLowerCase().includes('session') || input.toLowerCase().includes('work')) {
+      onStartSession();
+    } else if (input.toLowerCase().includes('yesterday') || input.toLowerCase().includes('history')) {
+      navigate('/history');
+    }
+    setInput('');
+  };
+
   const firstName = profile?.display_name?.split(' ')[0];
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8 pb-24 bg-warm-gradient">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 pb-24 bg-warm-gradient">
       <div className="w-full max-w-md animate-fade-in">
-        <div className="card-elevated p-12">
-          {/* Personalized greeting */}
-          <h1 className="text-2xl font-semibold text-foreground mb-2">
+        
+        {/* AI Presence Indicator - Always Pulsing */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="relative w-20 h-20 flex items-center justify-center mb-6">
+            {/* Outer ripple ring */}
+            <div className="absolute inset-0 rounded-full bg-primary/10 animate-ripple" />
+            {/* Middle breathing ring */}
+            <div className="absolute inset-2 rounded-full bg-primary/20 animate-breathe" />
+            {/* Inner glow */}
+            <div className="absolute inset-4 rounded-full bg-primary/30 animate-glow" />
+            {/* Core circle */}
+            <div className="relative w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg">
+              <div className="w-3 h-3 rounded-full bg-primary-foreground animate-pulse-subtle" />
+            </div>
+          </div>
+          
+          {/* Greeting from AI perspective */}
+          <h1 className="text-2xl font-semibold text-foreground text-center mb-1">
             {greeting}{firstName ? `, ${firstName}` : ''}.
           </h1>
-          <p className="text-muted-foreground mb-10">
+          <p className="text-muted-foreground text-center">
             {contextLine}
           </p>
-          
-          <button
-            onClick={onStartSession}
-            className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-3 group"
-          >
-            Start a Work Session
-            <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-          </button>
         </div>
 
+        {/* Voice/Text Input Area */}
+        <div className="card-elevated p-4 mb-4">
+          <div className="flex items-center gap-3 mb-4">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type or tap mic to speak..."
+              className="flex-1 px-4 py-3 rounded-xl bg-secondary/50 text-base focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-secondary transition-colors"
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            />
+            {input.trim() ? (
+              <button
+                onClick={handleSend}
+                className="p-3 rounded-xl bg-primary text-primary-foreground hover:brightness-105 transition-all"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            ) : (
+              <button
+                onClick={handleMicPress}
+                disabled={isProcessing}
+                className={`p-3 rounded-xl transition-all ${
+                  isRecording 
+                    ? 'bg-destructive text-destructive-foreground animate-recording' 
+                    : 'bg-primary text-primary-foreground hover:brightness-105'
+                } ${isProcessing ? 'opacity-50' : ''}`}
+              >
+                {isRecording ? (
+                  <Square className="w-5 h-5" />
+                ) : (
+                  <Mic className="w-5 h-5" />
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Recording/Processing Status */}
+          {(isRecording || isProcessing) && (
+            <div className="text-center text-sm text-muted-foreground mb-3">
+              {isRecording && (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                  Recording... tap to stop
+                </span>
+              )}
+              {isProcessing && 'Processing audio...'}
+            </div>
+          )}
+
+          {error && (
+            <div className="text-center text-sm text-destructive mb-3">
+              {error}
+            </div>
+          )}
+
+          {/* Large Mic Button for Voice-First */}
+          {!input.trim() && !isRecording && (
+            <button
+              onClick={handleMicPress}
+              disabled={isProcessing}
+              className="w-full py-4 rounded-xl bg-secondary/30 text-muted-foreground hover:bg-secondary/50 transition-all flex items-center justify-center gap-2"
+            >
+              <Mic className="w-5 h-5" />
+              Tap to talk
+            </button>
+          )}
+
+          {/* Quick Action Chips */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            {quickActions.map((action) => (
+              <button
+                key={action.label}
+                onClick={() => handleQuickAction(action.action)}
+                className="px-4 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Start Session CTA */}
+        <button
+          onClick={onStartSession}
+          className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-3 group mb-6"
+        >
+          Start a Work Session
+          <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+        </button>
+
+        {/* Quick Start Templates */}
         {recentTemplates.length > 0 && (
-          <div className="mt-6">
+          <div>
             <h2 className="text-sm font-medium text-muted-foreground mb-3 px-1">
               Quick Start
             </h2>
