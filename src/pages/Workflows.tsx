@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Layers, Play, Trash2, Plus, Pencil, X, Eye, ChevronDown, ChevronRight } from 'lucide-react';
+import { Layers, Play, Trash2, Plus, Pencil, X, Eye, ChevronDown, ChevronRight, FolderOpen, ListChecks, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TemplateEditModal } from '@/components/TemplateEditModal';
 import { ProjectCreateModal } from '@/components/ProjectCreateModal';
 import { ProjectCard } from '@/components/ProjectCard';
+import { WorkflowHierarchyExplainer, useShowHierarchyExplainer } from '@/components/WorkflowHierarchyExplainer';
 import { categories, getCategoryById, CategoryType, getCategoryColor } from '@/data/ventures';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -85,6 +86,7 @@ export default function Workflows() {
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [visibleTabs, setVisibleTabs] = useState<TabType[]>(['personal', 'projects', 'business']);
   const [activeTab, setActiveTab] = useState<TabType>('personal');
+  const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer();
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -481,13 +483,28 @@ export default function Workflows() {
           </DropdownMenu>
         </div>
 
-        {/* Active Projects Section */}
+        {/* Hierarchy Explainer - for new users or empty state */}
+        {showHierarchyExplainer && templates.length === 0 && projects.length === 0 && (
+          <div className="mb-6">
+            <WorkflowHierarchyExplainer onDismiss={dismissHierarchyExplainer} />
+          </div>
+        )}
+
+        {/* Active Multi-Stage Projects Section */}
         {projects.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              Active Workflows
-            </h2>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                <FolderOpen className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  Active Projects
+                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                </h2>
+                <p className="text-xs text-muted-foreground">Multi-stage workflows with multiple phases</p>
+              </div>
+            </div>
             <div className="space-y-4">
               {projects.map((project) => (
                 <ProjectCard
@@ -501,11 +518,19 @@ export default function Workflows() {
           </div>
         )}
 
-        {/* Saved Workflows Section */}
+        {/* Saved Single-Stage Workflows Section */}
         <div>
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
-            Saved Workflows
-          </h2>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+              <ListChecks className="w-4 h-4 text-foreground" />
+            </div>
+            <div>
+              <h2 className="text-sm font-medium text-foreground">
+                Single-Stage Workflows
+              </h2>
+              <p className="text-xs text-muted-foreground">Quick tasks and routines</p>
+            </div>
+          </div>
 
           {templates.length === 0 && projectTemplates.length === 0 ? (
             <div className="card-elevated p-8 text-center">
