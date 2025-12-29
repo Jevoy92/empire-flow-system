@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Layout, Play, Trash2, Plus, Pencil, X, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TemplateEditModal } from '@/components/TemplateEditModal';
-import { categories, getCategoryById, CategoryType } from '@/data/ventures';
+import { categories, getCategoryById, CategoryType, categoryTypeColors } from '@/data/ventures';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   DropdownMenu,
@@ -306,56 +306,65 @@ export default function Templates() {
     });
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         {sortedCategoryIds.map(categoryId => {
           const category = getCategoryById(categoryId);
           const categoryTemplates = grouped[categoryId];
+          const typeColor = category ? categoryTypeColors[category.type] : categoryTypeColors.business;
           
           return (
             <div key={categoryId}>
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-1">
-                {category?.name || categoryId}
-              </h3>
-              <div className="space-y-1">
-                {categoryTemplates.map(template => (
-                  <div
-                    key={template.id}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border hover:bg-secondary/50 transition-colors group"
-                  >
-                    <div className="flex-1 min-w-0 flex items-center gap-2">
-                      <span className="font-medium text-foreground truncate">
-                        {template.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        {template.work_type}
-                      </span>
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <div className={`w-2 h-2 rounded-full ${typeColor.bg}`} />
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  {category?.name || categoryId}
+                </h3>
+              </div>
+              <div className="space-y-2">
+                {categoryTemplates.map(template => {
+                  const templateCategory = getCategoryById(template.venture);
+                  const templateTypeColor = templateCategory ? categoryTypeColors[templateCategory.type] : categoryTypeColors.business;
+                  
+                  return (
+                    <div
+                      key={template.id}
+                      className={`flex items-center gap-2 px-3 py-3 rounded-lg bg-card border border-border border-l-4 ${templateTypeColor.border} hover:bg-secondary/50 transition-all group hover:shadow-sm`}
+                    >
+                      <div className="flex-1 min-w-0 flex items-center gap-2">
+                        <span className="font-medium text-foreground truncate">
+                          {template.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground shrink-0 px-1.5 py-0.5 rounded bg-secondary">
+                          {template.work_type}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          onClick={() => useTemplate(template)}
+                          className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                          title="Use template"
+                        >
+                          <Play className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEditClick(template)}
+                          className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                          title="Edit template"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteTemplate(template.id)}
+                          className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Delete template"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                    
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      <button
-                        onClick={() => useTemplate(template)}
-                        className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                        title="Use template"
-                      >
-                        <Play className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleEditClick(template)}
-                        className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                        title="Edit template"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => deleteTemplate(template.id)}
-                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                        title="Delete template"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
@@ -410,24 +419,31 @@ export default function Templates() {
                 visibleTabs.length === 1 ? 'grid-cols-1' : 
                 visibleTabs.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
               }`}>
-                {visibleTabs.map(tab => (
-                  <TabsTrigger key={tab} value={tab} className="gap-1.5 group relative">
-                    {TAB_LABELS[tab]}
-                    <span className="text-xs text-muted-foreground">({getTemplatesForTab(tab).length})</span>
-                    {visibleTabs.length > 1 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          hideTab(tab);
-                        }}
-                        className="absolute -top-1 -right-1 p-0.5 rounded-full bg-muted hover:bg-destructive/20 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title={`Hide ${TAB_LABELS[tab]} tab`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </TabsTrigger>
-                ))}
+                {visibleTabs.map(tab => {
+                  const tabColorMap: Record<TabType, string> = {
+                    personal: 'data-[state=active]:border-b-2 data-[state=active]:border-b-[hsl(174,65%,45%)]',
+                    projects: 'data-[state=active]:border-b-2 data-[state=active]:border-b-[hsl(35,85%,50%)]',
+                    business: 'data-[state=active]:border-b-2 data-[state=active]:border-b-primary',
+                  };
+                  return (
+                    <TabsTrigger key={tab} value={tab} className={`gap-1.5 group relative ${tabColorMap[tab]}`}>
+                      {TAB_LABELS[tab]}
+                      <span className="text-xs text-muted-foreground">({getTemplatesForTab(tab).length})</span>
+                      {visibleTabs.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            hideTab(tab);
+                          }}
+                          className="absolute -top-1 -right-1 p-0.5 rounded-full bg-muted hover:bg-destructive/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title={`Hide ${TAB_LABELS[tab]} tab`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
               
               {hiddenTabs.length > 0 && (

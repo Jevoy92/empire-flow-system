@@ -164,6 +164,11 @@ export default function Session() {
           onComplete={handleShutdownComplete}
           onPlanNext={handlePlanNext}
           onSaveAsTemplate={handleSaveAsTemplate}
+          sessionStats={{
+            durationMinutes: Math.round((new Date().getTime() - startTime.getTime()) / 60000),
+            tasksCompleted: sessionTasks.filter(t => t.completed).length,
+            totalTasks: sessionTasks.length,
+          }}
         />
       )}
     </div>

@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { VentureId } from '@/types/empire';
 import { ventures, defaultTasks, getCategoryById } from '@/data/ventures';
 import { X, Plus, Trash2, Check, RotateCcw, Square, Pause, Play } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CircularProgress } from './CircularProgress';
 import { SessionAssistant } from './SessionAssistant';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Task {
   id: string;
@@ -31,6 +32,9 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   const [totalVentureMinutes, setTotalVentureMinutes] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [pausedTime, setPausedTime] = useState(0);
+  const [celebratingTaskId, setCelebratingTaskId] = useState<string | null>(null);
+  const { toast } = useToast();
+  const prevCompletedCountRef = useRef(0);
   
   const getInitialTasks = (): Task[] => {
     if (initialTasks && initialTasks.length > 0) {
@@ -89,12 +93,52 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   const completedCount = tasks.filter(t => t.completed).length;
   const progress = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
 
+  // Milestone celebrations
+  useEffect(() => {
+    const prevCount = prevCompletedCountRef.current;
+    const totalTasks = tasks.length;
+    
+    if (completedCount > prevCount && totalTasks > 0) {
+      // Check for milestones
+      const halfwayPoint = Math.ceil(totalTasks / 2);
+      const almostDone = totalTasks - 1;
+      
+      if (completedCount === halfwayPoint && prevCount < halfwayPoint) {
+        toast({
+          title: "🔥 Halfway there!",
+          description: "You're building momentum. Keep going!",
+          variant: "celebration",
+        });
+      } else if (completedCount === almostDone && prevCount < almostDone && totalTasks > 2) {
+        toast({
+          title: "⚡ One more to go!",
+          description: "Almost there. Finish strong!",
+          variant: "celebration",
+        });
+      } else if (completedCount === totalTasks) {
+        toast({
+          title: "🎉 All tasks done!",
+          description: "You completed everything. Nice work!",
+          variant: "success",
+        });
+      }
+    }
+    
+    prevCompletedCountRef.current = completedCount;
+  }, [completedCount, tasks.length, toast]);
+
   // Notify parent of task changes
   useEffect(() => {
     onTasksChange?.(tasks);
   }, [tasks, onTasksChange]);
 
   const toggleTask = (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (task && !task.completed) {
+      // Trigger celebration animation
+      setCelebratingTaskId(id);
+      setTimeout(() => setCelebratingTaskId(null), 400);
+    }
     setTasks(tasks.map(t => 
       t.id === id ? { ...t, completed: !t.completed } : t
     ));
@@ -268,21 +312,21 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
           {tasks.map((task, index) => (
             <div
               key={task.id}
-              className={`flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 ${
-                task.completed ? 'bg-status-active/5' : ''
-              }`}
+              className={`flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 group ${
+                task.completed ? 'bg-[hsl(145,65%,45%)]/5' : ''
+              } ${celebratingTaskId === task.id ? 'animate-[celebrate-pop_0.3s_ease-out]' : ''}`}
             >
               <button
                 onClick={() => toggleTask(task.id)}
                 className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                   task.completed
-                    ? 'bg-status-active border-status-active text-white'
-                    : 'border-muted-foreground/30 hover:border-primary'
-                }`}
+                    ? 'bg-[hsl(145,65%,45%)] border-[hsl(145,65%,45%)] text-white scale-110'
+                    : 'border-muted-foreground/30 hover:border-primary hover:scale-105'
+                } ${celebratingTaskId === task.id ? 'animate-[celebrate-pop_0.3s_ease-out]' : ''}`}
               >
                 {task.completed && <Check className="w-4 h-4" />}
               </button>
-              <span className={`flex-1 text-sm ${task.completed ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+              <span className={`flex-1 text-sm transition-all ${task.completed ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                 {task.text}
               </span>
               <button

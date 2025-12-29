@@ -10,6 +10,25 @@ export interface Category {
   color: string;
 }
 
+// Category type colors for visual coding
+export const categoryTypeColors: Record<CategoryType, { bg: string; border: string; text: string }> = {
+  personal: {
+    bg: 'bg-[hsl(174,65%,45%)]',
+    border: 'border-l-[hsl(174,65%,45%)]',
+    text: 'text-[hsl(174,65%,45%)]',
+  },
+  project: {
+    bg: 'bg-[hsl(35,85%,50%)]',
+    border: 'border-l-[hsl(35,85%,50%)]',
+    text: 'text-[hsl(35,85%,50%)]',
+  },
+  business: {
+    bg: 'bg-primary',
+    border: 'border-l-primary',
+    text: 'text-primary',
+  },
+};
+
 // Business Ventures
 export const ventures: Venture[] = [
   {

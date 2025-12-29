@@ -1,10 +1,15 @@
-import { useState } from 'react';
-import { Check, X, Save } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Check, X, Save, Sparkles } from 'lucide-react';
 
 interface SystemShutdownProps {
   onComplete: () => void;
   onPlanNext?: () => void;
   onSaveAsTemplate?: (name: string) => void;
+  sessionStats?: {
+    durationMinutes: number;
+    tasksCompleted: number;
+    totalTasks: number;
+  };
 }
 
 const shutdownChecklist = [
@@ -13,12 +18,25 @@ const shutdownChecklist = [
   { id: 3, label: 'Status logged or updated' },
 ];
 
-export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate }: SystemShutdownProps) {
+const encouragingMessages = [
+  "You're building momentum.",
+  "Consistency wins.",
+  "Another session in the books.",
+  "Progress over perfection.",
+  "Small steps, big results.",
+  "You showed up. That matters.",
+];
+
+export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate, sessionStats }: SystemShutdownProps) {
   const [completedItems, setCompletedItems] = useState<number[]>([]);
   const [nextNote, setNextNote] = useState('');
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [saved, setSaved] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [encouragingMessage] = useState(() => 
+    encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)]
+  );
 
   const toggleItem = (id: number) => {
     setCompletedItems(prev =>
@@ -28,6 +46,13 @@ export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate }: Sys
 
   const allComplete = completedItems.length === shutdownChecklist.length;
 
+  // Trigger celebration when all items complete
+  useEffect(() => {
+    if (allComplete && !showCelebration) {
+      setShowCelebration(true);
+    }
+  }, [allComplete, showCelebration]);
+
   const handleSaveTemplate = () => {
     if (templateName.trim() && onSaveAsTemplate) {
       onSaveAsTemplate(templateName.trim());
@@ -36,10 +61,39 @@ export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate }: Sys
     }
   };
 
+  const formatDuration = (minutes: number) => {
+    if (minutes < 60) return `${minutes}m`;
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-8" style={{ backgroundColor: 'hsl(var(--session-warm))' }}>
       <div className="w-full max-w-lg animate-fade-in">
-        <div className="card-elevated p-8">
+        <div className="card-elevated p-8 relative overflow-hidden">
+          {/* Confetti effect when complete */}
+          {showCelebration && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              {[...Array(12)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-2 h-2 rounded-full animate-[confetti-fall_2s_ease-out_forwards]"
+                  style={{
+                    left: `${10 + (i * 7)}%`,
+                    top: '-10px',
+                    backgroundColor: i % 3 === 0 
+                      ? 'hsl(248, 85%, 65%)' 
+                      : i % 3 === 1 
+                        ? 'hsl(145, 65%, 45%)' 
+                        : 'hsl(35, 85%, 50%)',
+                    animationDelay: `${i * 0.1}s`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Checklist */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-2">Organize & Save</h2>
@@ -52,9 +106,9 @@ export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate }: Sys
                   <button
                     key={item.id}
                     onClick={() => toggleItem(item.id)}
-                    className={`checklist-item ${isComplete ? 'completed' : ''}`}
+                    className={`checklist-item ${isComplete ? 'completed' : ''} ${isComplete ? 'animate-[celebrate-pop_0.3s_ease-out]' : ''}`}
                   >
-                    <div className={`check-circle ${isComplete ? 'checked' : ''}`}>
+                    <div className={`check-circle ${isComplete ? 'checked' : ''} transition-transform ${isComplete ? 'scale-110' : ''}`}>
                       {isComplete && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
                     </div>
                     <span>{item.label}</span>
@@ -110,20 +164,46 @@ export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate }: Sys
           )}
 
           {saved && (
-            <div className="mb-6 p-3 rounded-lg bg-status-active/10 text-status-active text-sm text-center">
+            <div className="mb-6 p-3 rounded-lg bg-[hsl(145,65%,45%)]/10 text-[hsl(145,65%,45%)] text-sm text-center">
               Template saved!
             </div>
           )}
 
           {/* Complete Section */}
           {allComplete && (
-            <div className="pt-6 border-t border-border animate-fade-in text-center">
+            <div className="pt-6 border-t border-border animate-[celebration-burst_0.5s_ease-out] text-center">
+              {/* Celebration Icon */}
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-[hsl(145,65%,45%)] flex items-center justify-center animate-[celebrate-pop_0.5s_ease-out]">
+                  <Sparkles className="w-8 h-8 text-white" />
+                </div>
+              </div>
+
               <h3 className="text-2xl font-semibold text-foreground mb-2">
                 Session Complete
               </h3>
-              <p className="text-muted-foreground mb-8">
-                You are done. Stopping is part of the work.
+              <p className="text-muted-foreground mb-4">
+                {encouragingMessage}
               </p>
+
+              {/* Session Stats */}
+              {sessionStats && (
+                <div className="flex justify-center gap-6 mb-6 py-3 px-4 rounded-lg bg-secondary/50">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-foreground">
+                      {formatDuration(sessionStats.durationMinutes)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Duration</div>
+                  </div>
+                  <div className="w-px bg-border" />
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-foreground">
+                      {sessionStats.tasksCompleted}/{sessionStats.totalTasks}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Tasks Done</div>
+                  </div>
+                </div>
+              )}
               
               <div className="flex flex-col gap-3">
                 {onPlanNext && (
