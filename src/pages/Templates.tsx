@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Layout, Play, Trash2, Plus, Pencil, Folder, ChevronDown } from 'lucide-react';
+import { Layout, Play, Trash2, Plus, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
 import { TemplateEditModal } from '@/components/TemplateEditModal';
 import { categories, getCategoryById } from '@/data/ventures';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Template {
   id: string;
@@ -55,14 +54,12 @@ export default function Templates() {
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', template.id);
 
-    // Convert template tasks to session format
     const initialTasks = (template.default_tasks || []).map((task, idx) => ({
       id: `task-${idx}`,
       text: typeof task === 'string' ? task : task.text || '',
       completed: false,
     }));
 
-    // Navigate directly to session with all template data
     navigate('/session', {
       state: {
         venture: template.venture,
@@ -101,7 +98,6 @@ export default function Templates() {
 
   const handleSaveTemplate = async (templateData: Partial<Template>) => {
     if (isCreating) {
-      // Create new template
       const { data, error } = await supabase
         .from('templates')
         .insert({
@@ -125,7 +121,6 @@ export default function Templates() {
         }, ...templates]);
       }
     } else if (templateData.id) {
-      // Update existing template
       const { error } = await supabase
         .from('templates')
         .update({
@@ -152,24 +147,109 @@ export default function Templates() {
     setIsEditModalOpen(false);
   };
 
-  // Group templates by category
-  const groupedTemplates = templates.reduce((acc, template) => {
-    const categoryId = template.venture;
-    if (!acc[categoryId]) {
-      acc[categoryId] = [];
-    }
-    acc[categoryId].push(template);
-    return acc;
-  }, {} as Record<string, Template[]>);
+  // Split templates by type
+  const { personalTemplates, businessTemplates } = useMemo(() => {
+    const personal: Template[] = [];
+    const business: Template[] = [];
+    
+    templates.forEach(template => {
+      const category = getCategoryById(template.venture);
+      if (category?.type === 'personal') {
+        personal.push(template);
+      } else {
+        business.push(template);
+      }
+    });
+    
+    return { personalTemplates: personal, businessTemplates: business };
+  }, [templates]);
 
-  // Sort categories: personal first, then business
-  const sortedCategoryIds = Object.keys(groupedTemplates).sort((a, b) => {
-    const catA = getCategoryById(a);
-    const catB = getCategoryById(b);
-    if (catA?.type === 'personal' && catB?.type !== 'personal') return -1;
-    if (catA?.type !== 'personal' && catB?.type === 'personal') return 1;
-    return (catA?.name || a).localeCompare(catB?.name || b);
-  });
+  // Group templates by category within each type
+  const groupByCategory = (templateList: Template[]) => {
+    return templateList.reduce((acc, template) => {
+      const categoryId = template.venture;
+      if (!acc[categoryId]) {
+        acc[categoryId] = [];
+      }
+      acc[categoryId].push(template);
+      return acc;
+    }, {} as Record<string, Template[]>);
+  };
+
+  const renderTemplateList = (templateList: Template[]) => {
+    if (templateList.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          No templates in this category yet.
+        </div>
+      );
+    }
+
+    const grouped = groupByCategory(templateList);
+    const sortedCategoryIds = Object.keys(grouped).sort((a, b) => {
+      const catA = getCategoryById(a);
+      const catB = getCategoryById(b);
+      return (catA?.name || a).localeCompare(catB?.name || b);
+    });
+
+    return (
+      <div className="space-y-4">
+        {sortedCategoryIds.map(categoryId => {
+          const category = getCategoryById(categoryId);
+          const categoryTemplates = grouped[categoryId];
+          
+          return (
+            <div key={categoryId}>
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-1">
+                {category?.name || categoryId}
+              </h3>
+              <div className="space-y-1">
+                {categoryTemplates.map(template => (
+                  <div
+                    key={template.id}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border hover:bg-secondary/50 transition-colors group"
+                  >
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <span className="font-medium text-foreground truncate">
+                        {template.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {template.work_type}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        onClick={() => useTemplate(template)}
+                        className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                        title="Use template"
+                      >
+                        <Play className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleEditClick(template)}
+                        className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Edit template"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => deleteTemplate(template.id)}
+                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Delete template"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -185,7 +265,7 @@ export default function Templates() {
   return (
     <div className="min-h-screen pb-20 p-6 animate-fade-in">
       <div className="max-w-lg mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-semibold">Templates</h1>
           <button
             onClick={handleCreateClick}
@@ -211,90 +291,26 @@ export default function Templates() {
             </button>
           </div>
         ) : (
-          <div className="space-y-6">
-            {sortedCategoryIds.map((categoryId) => {
-              const categoryData = getCategoryById(categoryId);
-              const categoryTemplates = groupedTemplates[categoryId];
-              
-              return (
-                <Collapsible key={categoryId} defaultOpen={categoryTemplates.length <= 5}>
-                  <CollapsibleTrigger className="w-full">
-                    <div className="flex items-center gap-2 mb-3 hover:bg-secondary/50 rounded-lg px-2 py-1 -mx-2 transition-colors cursor-pointer group">
-                      <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                      <Folder className="w-4 h-4 text-muted-foreground" />
-                      <h2 className="text-sm font-medium text-muted-foreground flex-1 text-left">
-                        {categoryData?.name || categoryId}
-                        {categoryData?.type === 'personal' && (
-                          <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent">
-                            Personal
-                          </span>
-                        )}
-                      </h2>
-                      <span className="text-xs text-muted-foreground/60">
-                        {categoryTemplates.length}
-                      </span>
-                    </div>
-                  </CollapsibleTrigger>
-                  
-                  <CollapsibleContent>
-                    <div className="space-y-2 mb-4">
-                      {categoryTemplates.map((template) => (
-                        <div
-                          key={template.id}
-                          className="card-elevated p-4"
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-medium text-foreground mb-1 truncate">{template.name}</h3>
-                              <div className="text-sm text-muted-foreground">
-                                {template.work_type}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 ml-2">
-                              <button
-                                onClick={() => useTemplate(template)}
-                                className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-primary transition-colors"
-                                title="Use template"
-                              >
-                                <Play className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleEditClick(template)}
-                                className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                                title="Edit template"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => deleteTemplate(template.id)}
-                                className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                                title="Delete template"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            {template.use_ai_tasks ? (
-                              <span className="text-primary">AI tasks</span>
-                            ) : (
-                              <span>{template.default_tasks.length} preset tasks</span>
-                            )}
-                            {template.last_used_at && (
-                              <span>
-                                Used {formatDistanceToNow(new Date(template.last_used_at), { addSuffix: true })}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              );
-            })}
-          </div>
+          <Tabs defaultValue="personal" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="personal" className="gap-2">
+                Personal
+                <span className="text-xs text-muted-foreground">({personalTemplates.length})</span>
+              </TabsTrigger>
+              <TabsTrigger value="business" className="gap-2">
+                Business
+                <span className="text-xs text-muted-foreground">({businessTemplates.length})</span>
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="personal" className="mt-0">
+              {renderTemplateList(personalTemplates)}
+            </TabsContent>
+            
+            <TabsContent value="business" className="mt-0">
+              {renderTemplateList(businessTemplates)}
+            </TabsContent>
+          </Tabs>
         )}
       </div>
 
