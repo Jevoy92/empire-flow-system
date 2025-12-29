@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -50,6 +51,7 @@ export default function Settings() {
   const { stats, loading: statsLoading, unlockedCount, totalCount, progressPercentage } = useUserStats();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { theme: currentTheme, setTheme: setAppTheme } = useTheme();
 
   const [displayName, setDisplayName] = useState('');
   const [theme, setTheme] = useState('system');
@@ -71,8 +73,16 @@ export default function Settings() {
     if (settings) {
       setTheme(settings.theme);
       setSessionDuration(settings.default_session_duration);
+      // Apply saved theme on load
+      setAppTheme(settings.theme);
     }
-  }, [profile, settings]);
+  }, [profile, settings, setAppTheme]);
+
+  // Apply theme immediately when changed for preview
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme);
+    setAppTheme(newTheme); // Apply immediately for preview
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -305,7 +315,7 @@ export default function Settings() {
                 <Palette className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm text-foreground">Theme</span>
               </div>
-              <Select value={theme} onValueChange={(v) => { setTheme(v); }}>
+              <Select value={theme} onValueChange={handleThemeChange}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
