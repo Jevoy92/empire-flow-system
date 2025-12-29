@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { ArrowRight, Play, Mic, Send, Square, MessageSquare, Check, Loader2, Sparkles } from 'lucide-react';
+import { ArrowRight, Play, Mic, Send, Square, MessageSquare, Check, Loader2, Sparkles, FolderOpen, ListChecks, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { getCategoryById, getCategoryColor } from '@/data/ventures';
 import { formatDistanceToNow } from 'date-fns';
+import { WorkflowHierarchyExplainer, useShowHierarchyExplainer } from './WorkflowHierarchyExplainer';
 
 interface Template {
   id: string;
@@ -76,6 +77,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
   const navigate = useNavigate();
   const { profile, user } = useAuth();
   const { isRecording, isProcessing, partialText, startRecording, stopRecording, error } = useVoiceRecorder();
+  const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer();
 
   // Update input with partial text as user speaks
   useEffect(() => {
@@ -280,6 +282,13 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 pb-24 bg-warm-gradient">
       <div className="w-full max-w-md animate-fade-in">
         
+        {/* Workflow Hierarchy Explainer - First time users */}
+        {showHierarchyExplainer && (
+          <div className="mb-6">
+            <WorkflowHierarchyExplainer onDismiss={dismissHierarchyExplainer} />
+          </div>
+        )}
+
         {/* Notes from Past You */}
         {futureNotes.length > 0 && (
           <div className="mb-6 space-y-3 animate-fade-in">
@@ -423,6 +432,10 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
 
           {/* Smart AI-Powered Suggestions */}
           <div className="mt-4">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs font-medium text-muted-foreground">AI Suggestions</span>
+            </div>
             {suggestionsLoading ? (
               <div className="flex items-center justify-center gap-2 py-2 text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -430,17 +443,37 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {suggestions.slice(0, 4).map((suggestion, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="group px-3 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-1.5"
-                    title={suggestion.description}
-                  >
-                    {suggestion.type === 'project' && <Sparkles className="w-3 h-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />}
-                    {suggestion.label}
-                  </button>
-                ))}
+                {suggestions.slice(0, 4).map((suggestion, idx) => {
+                  const getIcon = () => {
+                    switch (suggestion.type) {
+                      case 'project': return <FolderOpen className="w-3.5 h-3.5" />;
+                      case 'template': return <ListChecks className="w-3.5 h-3.5" />;
+                      case 'routine': return <CheckCircle2 className="w-3.5 h-3.5" />;
+                      default: return <Sparkles className="w-3.5 h-3.5" />;
+                    }
+                  };
+                  
+                  const getBg = () => {
+                    switch (suggestion.type) {
+                      case 'project': return 'bg-primary/10 hover:bg-primary/20 border-primary/20';
+                      case 'template': return 'bg-secondary/50 hover:bg-secondary border-border/50';
+                      case 'routine': return 'bg-green-500/10 hover:bg-green-500/20 border-green-500/20';
+                      default: return 'bg-secondary/50 hover:bg-secondary border-border/50';
+                    }
+                  };
+                  
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className={`group px-3 py-2 rounded-lg text-sm text-foreground transition-all flex items-center gap-1.5 border ${getBg()}`}
+                      title={suggestion.description}
+                    >
+                      <span className="text-primary">{getIcon()}</span>
+                      {suggestion.label}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
