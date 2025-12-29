@@ -20,6 +20,12 @@ interface SessionContext {
   completionCondition: string;
   tasks: Task[];
   elapsedMinutes: number;
+  // Project context
+  projectName?: string;
+  currentStageName?: string;
+  stageProgress?: string;
+  nextStageName?: string;
+  isProjectSession?: boolean;
 }
 
 interface TaskAction {
@@ -224,6 +230,15 @@ export function SessionAssistant({
     sendMessage(label);
   };
 
+  // Build status text based on project context
+  const getStatusText = () => {
+    if (isLoading) return 'AI is thinking...';
+    if (sessionContext.isProjectSession && sessionContext.currentStageName) {
+      return `AI ready • ${sessionContext.currentStageName} (${sessionContext.stageProgress})`;
+    }
+    return 'AI is ready';
+  };
+
   return (
     <div className="card-elevated overflow-hidden mt-4 border border-primary/10">
       {/* Header with AI presence indicator - Always breathing */}
@@ -244,7 +259,7 @@ export function SessionAssistant({
             <div className="relative w-2.5 h-2.5 rounded-full bg-primary" />
           </div>
           <span className="text-muted-foreground">
-            {isLoading ? 'AI is thinking...' : 'AI is ready'}
+            {getStatusText()}
           </span>
           {messages.length > 0 && !isLoading && (
             <span className="text-xs text-muted-foreground/60">
