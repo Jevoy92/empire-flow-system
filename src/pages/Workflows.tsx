@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Layers, Play, Trash2, Plus, Pencil, X, Eye, ChevronDown, ChevronRight, FolderOpen, ListChecks, CheckCircle2 } from 'lucide-react';
+import { Layers, Play, Trash2, Plus, Pencil, X, Eye, ChevronDown, ChevronRight, FolderOpen, ListChecks, CheckCircle2, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TemplateEditModal } from '@/components/TemplateEditModal';
 import { ProjectCreateModal } from '@/components/ProjectCreateModal';
@@ -78,7 +78,7 @@ const TAB_LABELS: Record<TabType, string> = {
 export default function Workflows() {
   // All hooks must be called unconditionally at the top
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer();
   
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -91,6 +91,13 @@ export default function Workflows() {
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [visibleTabs, setVisibleTabs] = useState<TabType[]>(['personal', 'projects', 'business']);
   const [activeTab, setActiveTab] = useState<TabType>('personal');
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/auth');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   useEffect(() => {
     const init = async () => {
@@ -430,6 +437,19 @@ export default function Workflows() {
       </div>
     );
   };
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   if (loading) {
     return (
