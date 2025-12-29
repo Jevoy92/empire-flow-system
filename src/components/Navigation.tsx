@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, History, Layout, Settings, Sparkles } from 'lucide-react';
+import { Home, History, Layout, Settings, Sparkles, FolderOpen } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { AICommandCenter } from '@/components/AICommandCenter';
 import { useSession } from '@/contexts/SessionContext';
@@ -62,6 +62,19 @@ export function Navigation() {
             </div>
           </button>
 
+          {/* Projects */}
+          <Link
+            to="/projects"
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+              location.pathname === '/projects'
+                ? 'text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <FolderOpen className="w-5 h-5" />
+            <span className="text-xs font-medium">Projects</span>
+          </Link>
+
           {/* Templates */}
           <Link
             to="/templates"
@@ -74,8 +87,6 @@ export function Navigation() {
             <Layout className="w-5 h-5" />
             <span className="text-xs font-medium">Templates</span>
           </Link>
-
-          {/* Settings */}
           <Link
             to="/settings"
             className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${

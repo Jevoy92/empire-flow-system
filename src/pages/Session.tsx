@@ -12,6 +12,11 @@ interface Task {
   completed: boolean;
 }
 
+interface LocationState extends SessionConfig {
+  projectId?: string;
+  stageIndex?: number;
+}
+
 export default function Session() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,26 +54,41 @@ export default function Session() {
       }
 
       // Get config from navigation state
-      const config = location.state as SessionConfig | null;
-      if (!config) {
+      const state = location.state as LocationState | null;
+      if (!state) {
         navigate('/');
         return;
       }
 
+      const config: SessionConfig = {
+        venture: state.venture,
+        workType: state.workType,
+        focus: state.focus,
+        completionCondition: state.completionCondition,
+        initialTasks: state.initialTasks,
+      };
+
       // Get user
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Create session in database
+      // Create session in database with project link if provided
+      const sessionData: any = {
+        user_id: user?.id,
+        venture: config.venture,
+        work_type: config.workType,
+        focus: config.focus,
+        completion_condition: config.completionCondition,
+        status: 'active',
+      };
+
+      if (state.projectId) {
+        sessionData.project_id = state.projectId;
+        sessionData.stage_index = state.stageIndex;
+      }
+
       const { data, error } = await supabase
         .from('sessions')
-        .insert({
-          user_id: user?.id,
-          venture: config.venture,
-          work_type: config.workType,
-          focus: config.focus,
-          completion_condition: config.completionCondition,
-          status: 'active',
-        })
+        .insert(sessionData)
         .select()
         .single();
 
@@ -86,6 +106,7 @@ export default function Session() {
 
   const handleSessionComplete = async (completedTasks: Task[]) => {
     setSessionTasks(completedTasks);
+    const state = location.state as LocationState | null;
     
     if (sessionId && startTime) {
       const durationMinutes = Math.round((new Date().getTime() - startTime.getTime()) / 60000);
@@ -98,6 +119,33 @@ export default function Session() {
           duration_minutes: durationMinutes,
         })
         .eq('id', sessionId);
+
+      // Advance project stage if this session is part of a project
+      if (state?.projectId !== undefined && state?.stageIndex !== undefined) {
+        const { data: project } = await supabase
+          .from('projects')
+          .select('stages, current_stage')
+          .eq('id', state.projectId)
+          .single();
+
+        if (project && Array.isArray(project.stages)) {
+          const stages = project.stages as any[];
+          stages[state.stageIndex] = { ...stages[state.stageIndex], completed: true };
+          
+          const nextStage = state.stageIndex + 1;
+          const isProjectComplete = nextStage >= stages.length;
+
+          await supabase
+            .from('projects')
+            .update({
+              stages,
+              current_stage: isProjectComplete ? state.stageIndex : nextStage,
+              status: isProjectComplete ? 'completed' : 'active',
+              completed_at: isProjectComplete ? new Date().toISOString() : null,
+            })
+            .eq('id', state.projectId);
+        }
+      }
     }
     
     setView('shutdown');

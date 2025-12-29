@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.ai-command-center]
 verify_jwt = false
+
+[functions.smart-suggestions]
+verify_jwt = false
