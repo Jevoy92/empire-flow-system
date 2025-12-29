@@ -76,6 +76,11 @@ const TAB_LABELS: Record<TabType, string> = {
 };
 
 export default function Workflows() {
+  // All hooks must be called unconditionally at the top
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer();
+  
   const [templates, setTemplates] = useState<Template[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectTemplates, setProjectTemplates] = useState<ProjectTemplate[]>([]);
@@ -86,9 +91,6 @@ export default function Workflows() {
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [visibleTabs, setVisibleTabs] = useState<TabType[]>(['personal', 'projects', 'business']);
   const [activeTab, setActiveTab] = useState<TabType>('personal');
-  const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer();
-  const navigate = useNavigate();
-  const { user } = useAuth();
 
   useEffect(() => {
     const init = async () => {
