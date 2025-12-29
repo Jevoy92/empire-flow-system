@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { VentureId } from '@/types/empire';
 import { ventures, defaultTasks, getCategoryById } from '@/data/ventures';
-import { X, Plus, Trash2, Check, RotateCcw, Square, Pause, Play } from 'lucide-react';
+import { X, Plus, Trash2, Check, RotateCcw, Square, Pause, Play, Minimize2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CircularProgress } from './CircularProgress';
 import { SessionAssistant } from './SessionAssistant';
 import { useToast } from '@/hooks/use-toast';
+import { useSession } from '@/contexts/SessionContext';
 
 export interface Task {
   id: string;
@@ -26,15 +28,22 @@ interface WorkSessionProps {
 }
 
 export function WorkSession({ venture, workType, focus, completionCondition, initialTasks, startTime, onComplete, onAbort, onTasksChange }: WorkSessionProps) {
+  const navigate = useNavigate();
   const ventureData = ventures.find(v => v.id === venture);
   const categoryData = getCategoryById(venture);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [totalVentureMinutes, setTotalVentureMinutes] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [pausedTime, setPausedTime] = useState(0);
   const [celebratingTaskId, setCelebratingTaskId] = useState<string | null>(null);
   const { toast } = useToast();
   const prevCompletedCountRef = useRef(0);
+  
+  const { 
+    elapsedSeconds, 
+    isPaused, 
+    tasks: contextTasks,
+    togglePause, 
+    minimizeSession,
+    setTasks: setContextTasks 
+  } = useSession();
   
   const getInitialTasks = (): Task[] => {
     if (initialTasks && initialTasks.length > 0) {
@@ -47,18 +56,13 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
     }));
   };
   
-  const [tasks, setTasks] = useState<Task[]>(getInitialTasks);
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    // Use context tasks if available, otherwise get initial
+    if (contextTasks.length > 0) return contextTasks;
+    return getInitialTasks();
+  });
   const [newTaskText, setNewTaskText] = useState('');
   const [showAddTask, setShowAddTask] = useState(false);
-
-  // Running timer
-  useEffect(() => {
-    if (isPaused) return;
-    const interval = setInterval(() => {
-      setElapsedSeconds(Math.floor((new Date().getTime() - startTime.getTime()) / 1000) - pausedTime);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [startTime, isPaused, pausedTime]);
 
   // Fetch total time for this venture
   useEffect(() => {
@@ -127,10 +131,11 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
     prevCompletedCountRef.current = completedCount;
   }, [completedCount, tasks.length, toast]);
 
-  // Notify parent of task changes
+  // Notify parent and context of task changes
   useEffect(() => {
     onTasksChange?.(tasks);
-  }, [tasks, onTasksChange]);
+    setContextTasks(tasks);
+  }, [tasks, onTasksChange, setContextTasks]);
 
   const toggleTask = (id: string) => {
     const task = tasks.find(t => t.id === id);
@@ -214,13 +219,9 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
     onComplete(tasks);
   };
 
-  const togglePause = () => {
-    if (isPaused) {
-      // Resume - no need to track additional paused time for simplicity
-      setIsPaused(false);
-    } else {
-      setIsPaused(true);
-    }
+  const handleMinimize = () => {
+    minimizeSession();
+    navigate('/');
   };
 
   const getCategoryColor = () => {
@@ -240,6 +241,17 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
 
   return (
     <div className="w-full max-w-lg mx-auto px-4 animate-fade-in bg-session-warm min-h-screen py-6 -mt-6 -mx-4 px-8">
+      {/* Minimize Button */}
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={handleMinimize}
+          className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Minimize session"
+        >
+          <Minimize2 className="w-5 h-5" />
+        </button>
+      </div>
+
       {/* Task Context Card */}
       <div className="card-elevated p-4 mb-6">
         <div className="flex items-center gap-3">
