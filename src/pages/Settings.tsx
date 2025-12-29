@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserStats } from '@/hooks/useUserStats';
-import { achievements, isAchievementUnlocked } from '@/data/achievements';
+import { achievements } from '@/data/achievements';
 import { ArrowLeft, Loader2, LogOut, User, Trophy, Flame, Clock, CheckCircle2, FolderKanban, ChevronRight, Palette, Timer } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -24,17 +24,22 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import AchievementsPanel from '@/components/AchievementsPanel';
+import StatDetailSheet from '@/components/StatDetailSheet';
 
 interface StatCardProps {
   icon: React.ReactNode;
   label: string;
   value: string | number;
   bgColor?: string;
+  onClick?: () => void;
 }
 
-function StatCard({ icon, label, value, bgColor = 'bg-primary/10' }: StatCardProps) {
+function StatCard({ icon, label, value, bgColor = 'bg-primary/10', onClick }: StatCardProps) {
   return (
-    <div className={`p-4 rounded-2xl ${bgColor} border border-border/50`}>
+    <button 
+      onClick={onClick}
+      className={`p-4 rounded-2xl ${bgColor} border border-border/50 text-left w-full transition-all hover:scale-[1.02] hover:shadow-md active:scale-[0.98]`}
+    >
       <div className="flex items-center gap-2 mb-2">
         <div className="p-1.5 rounded-lg bg-background/80">
           {icon}
@@ -42,7 +47,7 @@ function StatCard({ icon, label, value, bgColor = 'bg-primary/10' }: StatCardPro
       </div>
       <p className="text-2xl font-bold text-foreground">{value}</p>
       <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-    </div>
+    </button>
   );
 }
 
@@ -59,6 +64,7 @@ export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [activeStatSheet, setActiveStatSheet] = useState<'sessions' | 'time' | 'streak' | 'projects' | null>(null);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -240,26 +246,56 @@ export default function Settings() {
             label="Sessions"
             value={stats.total_sessions_completed}
             bgColor="bg-emerald-500/10"
+            onClick={() => setActiveStatSheet('sessions')}
           />
           <StatCard
             icon={<Clock className="w-4 h-4 text-blue-500" />}
             label="Time Focused"
             value={formatTime(stats.total_minutes_worked)}
             bgColor="bg-blue-500/10"
+            onClick={() => setActiveStatSheet('time')}
           />
           <StatCard
             icon={<Flame className="w-4 h-4 text-orange-500" />}
             label="Day Streak"
             value={stats.current_streak}
             bgColor="bg-orange-500/10"
+            onClick={() => setActiveStatSheet('streak')}
           />
           <StatCard
             icon={<FolderKanban className="w-4 h-4 text-violet-500" />}
             label="Projects Done"
             value={stats.projects_completed}
             bgColor="bg-violet-500/10"
+            onClick={() => setActiveStatSheet('projects')}
           />
         </div>
+
+        {/* Stat Detail Sheets */}
+        <StatDetailSheet
+          open={activeStatSheet === 'sessions'}
+          onOpenChange={(open) => !open && setActiveStatSheet(null)}
+          type="sessions"
+          stats={stats}
+        />
+        <StatDetailSheet
+          open={activeStatSheet === 'time'}
+          onOpenChange={(open) => !open && setActiveStatSheet(null)}
+          type="time"
+          stats={stats}
+        />
+        <StatDetailSheet
+          open={activeStatSheet === 'streak'}
+          onOpenChange={(open) => !open && setActiveStatSheet(null)}
+          type="streak"
+          stats={stats}
+        />
+        <StatDetailSheet
+          open={activeStatSheet === 'projects'}
+          onOpenChange={(open) => !open && setActiveStatSheet(null)}
+          type="projects"
+          stats={stats}
+        />
 
         {/* Achievements Preview */}
         <Sheet>
