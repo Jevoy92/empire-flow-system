@@ -97,7 +97,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   const completedCount = tasks.filter(t => t.completed).length;
   const progress = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
 
-  // Milestone celebrations
+  // Milestone celebrations and auto-complete for task-based sessions
   useEffect(() => {
     const prevCount = prevCompletedCountRef.current;
     const totalTasks = tasks.length;
@@ -122,14 +122,23 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
       } else if (completedCount === totalTasks) {
         toast({
           title: "🎉 All tasks done!",
-          description: "You completed everything. Nice work!",
+          description: completionCondition === 'task-based' 
+            ? "Session completing..." 
+            : "You completed everything. Nice work!",
           variant: "success",
         });
+        
+        // Auto-complete for task-based sessions after a short delay
+        if (completionCondition === 'task-based') {
+          setTimeout(() => {
+            onComplete(tasks);
+          }, 1500);
+        }
       }
     }
     
     prevCompletedCountRef.current = completedCount;
-  }, [completedCount, tasks.length, toast]);
+  }, [completedCount, tasks.length, toast, completionCondition, onComplete, tasks]);
 
   // Notify parent and context of task changes
   useEffect(() => {
