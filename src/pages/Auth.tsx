@@ -112,6 +112,15 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center p-8 bg-background">
       <div className="w-full max-w-md animate-fade-in">
+        {/* Back to landing */}
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+        >
+          <ArrowRight className="w-4 h-4 rotate-180" />
+          Back to home
+        </button>
+        
         <div className="card-elevated p-8">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-semibold text-foreground mb-2">

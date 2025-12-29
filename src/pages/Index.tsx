@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HomeScreen } from '@/components/HomeScreen';
 import { SessionSetup } from '@/components/SessionSetup';
+import { LandingPage } from '@/components/LandingPage';
+import { useAuth } from '@/hooks/useAuth';
 import { VentureId, EnergyLevel } from '@/types/empire';
+import { Loader2 } from 'lucide-react';
 
 type AppView = 'home' | 'setup';
 
@@ -17,6 +20,7 @@ interface SessionConfig {
 const Index = () => {
   const [view, setView] = useState<AppView>('home');
   const navigate = useNavigate();
+  const { isAuthenticated, loading } = useAuth();
 
   // Check for prefill data from templates or history
   useEffect(() => {
@@ -38,6 +42,21 @@ const Index = () => {
     setView('home');
   };
 
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show landing page for unauthenticated users
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  // Show app for authenticated users
   return (
     <div className="min-h-screen bg-background">
       {view === 'home' && (
