@@ -97,6 +97,22 @@ export const categoryColors: Record<string, { bg: string; border: string; text: 
   },
 };
 
+// Dynamic color palette for user ventures (consistent assignment based on name)
+const dynamicColorPalette = [
+  { bg: 'bg-amber-500', border: 'border-l-amber-500', text: 'text-amber-500', light: 'bg-amber-500/10' },
+  { bg: 'bg-emerald-500', border: 'border-l-emerald-500', text: 'text-emerald-500', light: 'bg-emerald-500/10' },
+  { bg: 'bg-blue-500', border: 'border-l-blue-500', text: 'text-blue-500', light: 'bg-blue-500/10' },
+  { bg: 'bg-violet-500', border: 'border-l-violet-500', text: 'text-violet-500', light: 'bg-violet-500/10' },
+  { bg: 'bg-pink-500', border: 'border-l-pink-500', text: 'text-pink-500', light: 'bg-pink-500/10' },
+  { bg: 'bg-orange-500', border: 'border-l-orange-500', text: 'text-orange-500', light: 'bg-orange-500/10' },
+  { bg: 'bg-teal-500', border: 'border-l-teal-500', text: 'text-teal-500', light: 'bg-teal-500/10' },
+  { bg: 'bg-rose-500', border: 'border-l-rose-500', text: 'text-rose-500', light: 'bg-rose-500/10' },
+  { bg: 'bg-indigo-500', border: 'border-l-indigo-500', text: 'text-indigo-500', light: 'bg-indigo-500/10' },
+  { bg: 'bg-cyan-500', border: 'border-l-cyan-500', text: 'text-cyan-500', light: 'bg-cyan-500/10' },
+  { bg: 'bg-lime-500', border: 'border-l-lime-500', text: 'text-lime-500', light: 'bg-lime-500/10' },
+  { bg: 'bg-fuchsia-500', border: 'border-l-fuchsia-500', text: 'text-fuchsia-500', light: 'bg-fuchsia-500/10' },
+];
+
 // Default fallback color
 const defaultCategoryColor = { 
   bg: 'bg-gray-500', 
@@ -105,9 +121,30 @@ const defaultCategoryColor = {
   light: 'bg-gray-500/10' 
 };
 
-// Helper to get category color with fallback
+// Simple hash function to get consistent index from string
+function hashStringToIndex(str: string, max: number): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash) % max;
+}
+
+// Helper to get category color with fallback - now supports dynamic user ventures
 export function getCategoryColor(categoryId: string) {
-  return categoryColors[categoryId] || defaultCategoryColor;
+  // First check hardcoded categories
+  if (categoryColors[categoryId]) {
+    return categoryColors[categoryId];
+  }
+  
+  // For user-created ventures, assign consistent color based on name hash
+  if (categoryId && categoryId.length > 0) {
+    const colorIndex = hashStringToIndex(categoryId.toLowerCase(), dynamicColorPalette.length);
+    return dynamicColorPalette[colorIndex];
+  }
+  
+  return defaultCategoryColor;
 }
 
 // Business Ventures
