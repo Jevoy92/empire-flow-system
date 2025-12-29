@@ -24,24 +24,34 @@ export default function Session() {
   const location = useLocation();
   const [sessionConfig, setSessionConfig] = useState<SessionConfig | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [view, setView] = useState<'session' | 'shutdown'>('session');
   const [sessionTasks, setSessionTasks] = useState<{ id: string; text: string; completed: boolean }[]>([]);
   const [startTime] = useState<Date>(new Date());
 
   useEffect(() => {
-    const config = location.state as SessionConfig | null;
-    if (!config) {
-      navigate('/');
-      return;
-    }
-    setSessionConfig(config);
-    createSession(config);
+    const initSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+      
+      const config = location.state as SessionConfig | null;
+      if (!config) {
+        navigate('/');
+        return;
+      }
+      setSessionConfig(config);
+      createSession(config, user?.id);
+    };
+    initSession();
   }, [location.state, navigate]);
 
-  const createSession = async (config: SessionConfig) => {
+  const createSession = async (config: SessionConfig, currentUserId?: string) => {
     const { data, error } = await supabase
       .from('sessions')
       .insert({
+        user_id: currentUserId,
         venture: config.venture,
         work_type: config.workType,
         focus: config.focus,
@@ -111,11 +121,12 @@ export default function Session() {
   };
 
   const handleSaveAsTemplate = async (name: string) => {
-    if (!sessionConfig) return;
+    if (!sessionConfig || !userId) return;
     
     await supabase
       .from('templates')
       .insert({
+        user_id: userId,
         name,
         venture: sessionConfig.venture,
         work_type: sessionConfig.workType,
