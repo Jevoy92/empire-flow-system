@@ -6,7 +6,31 @@ import { TemplatePreviewCard } from './TemplatePreviewCard';
 import { ProjectPreviewCard } from './ProjectPreviewCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { z } from 'zod';
 
+// Schema validation for AI-generated templates
+const TemplateSchema = z.object({
+  name: z.string().min(1).max(100),
+  venture: z.string().min(1).max(100),
+  work_type: z.string().min(1).max(50),
+  default_focus: z.string().min(1).max(500),
+  default_tasks: z.array(z.string().min(1).max(200)).min(1).max(10),
+});
+
+// Schema validation for AI-generated projects
+const ProjectStageSchema = z.object({
+  name: z.string().min(1).max(100),
+  workType: z.string().min(1).max(50),
+  defaultFocus: z.string().min(1).max(500),
+  defaultTasks: z.array(z.string().min(1).max(200)).min(1).max(10),
+});
+
+const ProjectSchema = z.object({
+  name: z.string().min(1).max(100),
+  venture: z.string().min(1).max(100),
+  description: z.string().max(500).optional().default(''),
+  stages: z.array(ProjectStageSchema).min(1).max(10),
+});
 interface TemplateData {
   name: string;
   venture: string;
@@ -74,28 +98,32 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
     
     let text = content;
     
-    // Parse templates
+    // Parse templates with schema validation
     const templateRegex = /\[TEMPLATE\](.*?)\[\/TEMPLATE\]/gs;
     let match;
     while ((match = templateRegex.exec(content)) !== null) {
       try {
-        const templateData = JSON.parse(match[1]);
-        templates.push(templateData);
+        const parsed = JSON.parse(match[1]);
+        const validated = TemplateSchema.parse(parsed);
+        templates.push(validated as TemplateData);
         text = text.replace(match[0], '');
       } catch (e) {
-        console.error('Failed to parse template:', e);
+        console.error('Failed to parse/validate template:', e);
+        // Don't add invalid templates
       }
     }
     
-    // Parse projects
+    // Parse projects with schema validation
     const projectRegex = /\[PROJECT\](.*?)\[\/PROJECT\]/gs;
     while ((match = projectRegex.exec(content)) !== null) {
       try {
-        const projectData = JSON.parse(match[1]);
-        projects.push(projectData);
+        const parsed = JSON.parse(match[1]);
+        const validated = ProjectSchema.parse(parsed);
+        projects.push(validated as ProjectData);
         text = text.replace(match[0], '');
       } catch (e) {
-        console.error('Failed to parse project:', e);
+        console.error('Failed to parse/validate project:', e);
+        // Don't add invalid projects
       }
     }
     

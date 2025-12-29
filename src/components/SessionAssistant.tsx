@@ -1,6 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, ChevronUp, ChevronDown, Mic, Square, MessageCircle, ListPlus } from 'lucide-react';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { z } from 'zod';
+
+// Schema validation for AI-generated task actions
+const TaskActionSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('add_tasks'), tasks: z.array(z.string().min(1).max(200)) }),
+  z.object({ type: z.literal('complete_tasks'), matches: z.array(z.string().min(1).max(200)) }),
+  z.object({ type: z.literal('remove_tasks'), matches: z.array(z.string().min(1).max(200)) }),
+  z.object({ type: z.literal('update_task'), match: z.string().min(1).max(200), newText: z.string().min(1).max(200) }),
+]);
 
 interface Task {
   id: string;
@@ -83,7 +92,8 @@ export function SessionAssistant({
     
     while ((match = actionRegex.exec(content)) !== null) {
       try {
-        const action = JSON.parse(match[1]) as TaskAction;
+        const parsed = JSON.parse(match[1]);
+        const action = TaskActionSchema.parse(parsed);
         
         switch (action.type) {
           case 'add_tasks':
@@ -108,7 +118,8 @@ export function SessionAssistant({
             break;
         }
       } catch (e) {
-        console.error('Failed to parse action:', e);
+        console.error('Failed to parse/validate action:', e);
+        // Don't execute invalid actions
       }
     }
   };
