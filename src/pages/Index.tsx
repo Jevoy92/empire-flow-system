@@ -25,8 +25,15 @@ function useQueryFlag(key: string) {
 const Index = () => {
   const [view, setView] = useState<AppView>('home');
   const navigate = useNavigate();
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, needsOnboarding, loading } = useAuth();
   const isDemo = useQueryFlag("demo");
+
+  // Redirect to onboarding if user needs it
+  useEffect(() => {
+    if (!loading && isAuthenticated && needsOnboarding && !isDemo) {
+      navigate('/onboarding', { replace: true });
+    }
+  }, [loading, isAuthenticated, needsOnboarding, isDemo, navigate]);
 
   // Check for prefill data from templates or history
   useEffect(() => {
@@ -54,6 +61,15 @@ const Index = () => {
 
   // Show loading state while checking auth
   if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // If user needs onboarding, show loading while redirect happens
+  if (isAuthenticated && needsOnboarding && !isDemo) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
