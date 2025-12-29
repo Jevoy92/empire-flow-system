@@ -169,6 +169,11 @@ export default function Session() {
             tasksCompleted: sessionTasks.filter(t => t.completed).length,
             totalTasks: sessionTasks.length,
           }}
+          sessionContext={{
+            categoryId: sessionConfig.venture,
+            workType: sessionConfig.workType,
+            sessionId: sessionId || undefined,
+          }}
         />
       )}
     </div>

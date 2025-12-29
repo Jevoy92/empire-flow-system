@@ -10,24 +10,105 @@ export interface Category {
   color: string;
 }
 
-// Category type colors for visual coding
-export const categoryTypeColors: Record<CategoryType, { bg: string; border: string; text: string }> = {
-  personal: {
-    bg: 'bg-[hsl(174,65%,45%)]',
-    border: 'border-l-[hsl(174,65%,45%)]',
-    text: 'text-[hsl(174,65%,45%)]',
+// Individual category colors for visual coding - each category gets a unique color
+export const categoryColors: Record<string, { bg: string; border: string; text: string; light: string }> = {
+  // Personal (5 distinct colors)
+  'daily-maintenance': { 
+    bg: 'bg-amber-500', 
+    border: 'border-l-amber-500', 
+    text: 'text-amber-500', 
+    light: 'bg-amber-500/10' 
   },
-  project: {
-    bg: 'bg-[hsl(35,85%,50%)]',
-    border: 'border-l-[hsl(35,85%,50%)]',
-    text: 'text-[hsl(35,85%,50%)]',
+  'body-energy': { 
+    bg: 'bg-emerald-500', 
+    border: 'border-l-emerald-500', 
+    text: 'text-emerald-500', 
+    light: 'bg-emerald-500/10' 
   },
-  business: {
-    bg: 'bg-primary',
-    border: 'border-l-primary',
-    text: 'text-primary',
+  'admin-life': { 
+    bg: 'bg-blue-500', 
+    border: 'border-l-blue-500', 
+    text: 'text-blue-500', 
+    light: 'bg-blue-500/10' 
+  },
+  'transition': { 
+    bg: 'bg-violet-500', 
+    border: 'border-l-violet-500', 
+    text: 'text-violet-500', 
+    light: 'bg-violet-500/10' 
+  },
+  'care-relationships': { 
+    bg: 'bg-pink-500', 
+    border: 'border-l-pink-500', 
+    text: 'text-pink-500', 
+    light: 'bg-pink-500/10' 
+  },
+  
+  // Projects (4 distinct colors)
+  'side-project': { 
+    bg: 'bg-orange-500', 
+    border: 'border-l-orange-500', 
+    text: 'text-orange-500', 
+    light: 'bg-orange-500/10' 
+  },
+  'learning': { 
+    bg: 'bg-teal-500', 
+    border: 'border-l-teal-500', 
+    text: 'text-teal-500', 
+    light: 'bg-teal-500/10' 
+  },
+  'creative': { 
+    bg: 'bg-rose-500', 
+    border: 'border-l-rose-500', 
+    text: 'text-rose-500', 
+    light: 'bg-rose-500/10' 
+  },
+  'collaboration': { 
+    bg: 'bg-indigo-500', 
+    border: 'border-l-indigo-500', 
+    text: 'text-indigo-500', 
+    light: 'bg-indigo-500/10' 
+  },
+  
+  // Business (4 distinct colors)
+  'palmer-house': { 
+    bg: 'bg-sky-600', 
+    border: 'border-l-sky-600', 
+    text: 'text-sky-600', 
+    light: 'bg-sky-600/10' 
+  },
+  'besettld': { 
+    bg: 'bg-green-600', 
+    border: 'border-l-green-600', 
+    text: 'text-green-600', 
+    light: 'bg-green-600/10' 
+  },
+  'yourboy': { 
+    bg: 'bg-purple-600', 
+    border: 'border-l-purple-600', 
+    text: 'text-purple-600', 
+    light: 'bg-purple-600/10' 
+  },
+  'strinzees': { 
+    bg: 'bg-orange-600', 
+    border: 'border-l-orange-600', 
+    text: 'text-orange-600', 
+    light: 'bg-orange-600/10' 
   },
 };
+
+// Default fallback color
+const defaultCategoryColor = { 
+  bg: 'bg-gray-500', 
+  border: 'border-l-gray-500', 
+  text: 'text-gray-500', 
+  light: 'bg-gray-500/10' 
+};
+
+// Helper to get category color with fallback
+export function getCategoryColor(categoryId: string) {
+  return categoryColors[categoryId] || defaultCategoryColor;
+}
 
 // Business Ventures
 export const ventures: Venture[] = [

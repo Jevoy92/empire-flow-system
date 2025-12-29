@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Check, X, Save, Sparkles } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { getCategoryById } from '@/data/ventures';
 
 interface SystemShutdownProps {
   onComplete: () => void;
@@ -9,6 +11,11 @@ interface SystemShutdownProps {
     durationMinutes: number;
     tasksCompleted: number;
     totalTasks: number;
+  };
+  sessionContext?: {
+    categoryId: string;
+    workType: string;
+    sessionId?: string;
   };
 }
 
@@ -27,12 +34,41 @@ const encouragingMessages = [
   "You showed up. That matters.",
 ];
 
-export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate, sessionStats }: SystemShutdownProps) {
+// Generate sender role based on category and work type
+const generateSenderRole = (categoryId: string, workType: string): string => {
+  const category = getCategoryById(categoryId);
+  const categoryName = category?.name || categoryId;
+  
+  // Map work types to role names
+  const roleMap: Record<string, string> = {
+    'Social Media': 'Marketing',
+    'Content Creation': 'Creator',
+    'Content Editing': 'Editor',
+    'Strategic Planning': 'Strategist',
+    'Client Communication': 'Account Manager',
+    'Admin & Files': 'Admin',
+    'Learning & Research': 'Student',
+    'Daily Review': 'Planner',
+    'Personal Admin': 'Life Admin',
+  };
+
+  const roleName = roleMap[workType] || workType.split(' ')[0];
+  
+  // For business ventures, use the venture name
+  if (category?.type === 'business') {
+    return `${categoryName} ${roleName}`;
+  }
+  
+  return `${roleName} You`;
+};
+
+export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate, sessionStats, sessionContext }: SystemShutdownProps) {
   const [completedItems, setCompletedItems] = useState<number[]>([]);
   const [nextNote, setNextNote] = useState('');
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [saved, setSaved] = useState(false);
+  const [noteSaved, setNoteSaved] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [encouragingMessage] = useState(() => 
     encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)]
@@ -60,6 +96,40 @@ export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate, sessi
       setShowSaveTemplate(false);
     }
   };
+
+  // Save the "next time" note to future_notes table
+  const saveNoteForFuture = async () => {
+    if (!nextNote.trim() || !sessionContext) return;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const senderRole = generateSenderRole(sessionContext.categoryId, sessionContext.workType);
+
+      await supabase
+        .from('future_notes')
+        .insert({
+          user_id: user.id,
+          category_id: sessionContext.categoryId,
+          work_type: sessionContext.workType,
+          note: nextNote.trim(),
+          sender_role: senderRole,
+          session_id: sessionContext.sessionId || null,
+        });
+
+      setNoteSaved(true);
+    } catch (err) {
+      console.error('Error saving note:', err);
+    }
+  };
+
+  // Save note when checklist is complete and note exists
+  useEffect(() => {
+    if (allComplete && nextNote.trim() && !noteSaved && sessionContext) {
+      saveNoteForFuture();
+    }
+  }, [allComplete, nextNote, noteSaved, sessionContext]);
 
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes}m`;

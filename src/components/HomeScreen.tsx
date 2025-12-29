@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Play, Mic, Send, Square } from 'lucide-react';
+import { ArrowRight, Play, Mic, Send, Square, MessageSquare, X, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { getCategoryById, getCategoryColor } from '@/data/ventures';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Template {
   id: string;
@@ -14,6 +16,16 @@ interface Template {
   default_completion_condition: string | null;
   default_tasks: unknown;
   use_ai_tasks: boolean;
+}
+
+interface FutureNote {
+  id: string;
+  category_id: string;
+  work_type: string | null;
+  note: string;
+  sender_role: string;
+  created_at: string;
+  is_read: boolean;
 }
 
 interface HomeScreenProps {
@@ -57,6 +69,7 @@ const quickActions = [
 
 export function HomeScreen({ onStartSession }: HomeScreenProps) {
   const [recentTemplates, setRecentTemplates] = useState<Template[]>([]);
+  const [futureNotes, setFutureNotes] = useState<FutureNote[]>([]);
   const [greeting] = useState(getGreeting());
   const [contextLine] = useState(getContextLine());
   const [input, setInput] = useState('');
@@ -73,6 +86,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
 
   useEffect(() => {
     loadRecentTemplates();
+    loadFutureNotes();
   }, []);
 
   const loadRecentTemplates = async () => {
@@ -85,6 +99,32 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     if (data) {
       setRecentTemplates(data);
     }
+  };
+
+  const loadFutureNotes = async () => {
+    const { data } = await supabase
+      .from('future_notes')
+      .select('*')
+      .eq('is_read', false)
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    if (data) {
+      setFutureNotes(data as FutureNote[]);
+    }
+  };
+
+  const markNoteAsRead = async (noteId: string) => {
+    await supabase
+      .from('future_notes')
+      .update({ is_read: true })
+      .eq('id', noteId);
+
+    setFutureNotes(prev => prev.filter(n => n.id !== noteId));
+  };
+
+  const dismissNote = async (noteId: string) => {
+    await markNoteAsRead(noteId);
   };
 
   const useTemplate = async (template: Template) => {
@@ -148,6 +188,56 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 pb-24 bg-warm-gradient">
       <div className="w-full max-w-md animate-fade-in">
         
+        {/* Notes from Past You */}
+        {futureNotes.length > 0 && (
+          <div className="mb-6 space-y-3 animate-fade-in">
+            <h2 className="text-sm font-medium text-muted-foreground px-1 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Notes from Past You
+            </h2>
+            {futureNotes.map((note) => {
+              const catColor = getCategoryColor(note.category_id);
+              const category = getCategoryById(note.category_id);
+              
+              return (
+                <div
+                  key={note.id}
+                  className={`p-4 rounded-xl bg-card border border-border border-l-4 ${catColor.border} relative group`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-8 h-8 rounded-full ${catColor.bg} flex items-center justify-center shrink-0`}>
+                      <MessageSquare className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-sm font-medium ${catColor.text}`}>
+                          {note.sender_role}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <p className="text-foreground">"{note.note}"</p>
+                      {note.work_type && (
+                        <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+                          {category?.name} • {note.work_type}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => dismissNote(note.id)}
+                      className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                      title="Dismiss"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Greeting */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-semibold text-foreground mb-1">
