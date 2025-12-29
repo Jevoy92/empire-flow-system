@@ -144,12 +144,6 @@ export function AICommandCenter({ isOpen, onClose }: AICommandCenterProps) {
                   <p className="text-xs text-muted-foreground">How can I help?</p>
                 </div>
               </div>
-              <button 
-                onClick={onClose}
-                className="p-2 rounded-full hover:bg-secondary transition-colors"
-              >
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
             </div>
           </SheetHeader>
 
