@@ -30,7 +30,7 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
   const [workType, setWorkType] = useState<string>('');
   const [completedItems, setCompletedItems] = useState<number[]>([]);
 
-  const { personalVentures, projectVentures, businessVentures, loading, getWorkTypesForVenture } = useUserVentures();
+  const { personalVentures, projectVentures, loading, getWorkTypesForVenture } = useUserVentures();
 
   const canContinueDefinition = focus.trim() !== '' && completionCondition.trim() !== '';
   const canContinueCategory = selectedCategory !== null;
@@ -179,33 +179,6 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Projects</h3>
                   <div className="space-y-2">
                     {projectVentures.map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => {
-                          setSelectedCategory(cat.name);
-                          setWorkType('');
-                        }}
-                        className={`checklist-item py-3 ${selectedCategory === cat.name ? 'completed border-primary' : ''}`}
-                      >
-                        <div className={`check-circle ${selectedCategory === cat.name ? 'checked' : ''}`}>
-                          {selectedCategory === cat.name && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
-                        </div>
-                        <div>
-                          <div className="font-medium text-sm">{cat.name}</div>
-                          {cat.tagline && <div className="text-xs text-muted-foreground">{cat.tagline}</div>}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Business */}
-              {businessVentures.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Business</h3>
-                  <div className="space-y-2">
-                    {businessVentures.map((cat) => (
                       <button
                         key={cat.id}
                         onClick={() => {

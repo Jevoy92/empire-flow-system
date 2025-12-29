@@ -1,6 +1,6 @@
 import { Venture } from '@/types/empire';
 
-export type CategoryType = 'business' | 'personal' | 'project';
+export type CategoryType = 'personal' | 'project';
 
 export interface Category {
   id: string;
@@ -158,13 +158,14 @@ export const ventures: Venture[] = [
   },
 ];
 
-// All categories (business ventures + personal life operations + projects)
+// All categories (projects + personal life operations)
+// Legacy business ventures converted to projects for backwards compatibility
 export const categories: Category[] = [
-  // Business Ventures
-  { id: 'palmer-house', name: 'Palmer House', tagline: 'Video Systems', type: 'business', color: 'primary' },
-  { id: 'besettld', name: 'beSettld', tagline: 'Luxury Support', type: 'business', color: 'primary' },
-  { id: 'yourboy', name: 'YourBoyJevoy', tagline: 'Artistic Expression', type: 'business', color: 'primary' },
-  { id: 'strinzees', name: 'Strinzees', tagline: 'Modular Design', type: 'business', color: 'primary' },
+  // Legacy Business Ventures (now treated as Projects)
+  { id: 'palmer-house', name: 'Palmer House', tagline: 'Video Systems', type: 'project', color: 'primary' },
+  { id: 'besettld', name: 'beSettld', tagline: 'Luxury Support', type: 'project', color: 'primary' },
+  { id: 'yourboy', name: 'YourBoyJevoy', tagline: 'Artistic Expression', type: 'project', color: 'primary' },
+  { id: 'strinzees', name: 'Strinzees', tagline: 'Modular Design', type: 'project', color: 'primary' },
   // Projects
   { id: 'side-project', name: 'Side Project', tagline: 'Independent creative or technical work', type: 'project', color: 'secondary' },
   { id: 'learning', name: 'Learning', tagline: 'Skill development and courses', type: 'project', color: 'secondary' },

@@ -36,7 +36,7 @@ interface TemplateEditModalProps {
 }
 
 export function TemplateEditModal({ template, isOpen, onClose, onSave, isNew = false }: TemplateEditModalProps) {
-  const { ventures, personalVentures, projectVentures, businessVentures, getWorkTypesForVenture, loading: venturesLoading } = useUserVentures();
+  const { ventures, personalVentures, projectVentures, getWorkTypesForVenture, loading: venturesLoading } = useUserVentures();
   
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
@@ -206,13 +206,6 @@ export function TemplateEditModal({ template, isOpen, onClose, onSave, isNew = f
               {projectVentures.length > 0 && (
                 <optgroup label="Projects">
                   {projectVentures.map(v => (
-                    <option key={v.id} value={v.name}>{v.name}</option>
-                  ))}
-                </optgroup>
-              )}
-              {businessVentures.length > 0 && (
-                <optgroup label="Business">
-                  {businessVentures.map(v => (
                     <option key={v.id} value={v.name}>{v.name}</option>
                   ))}
                 </optgroup>
