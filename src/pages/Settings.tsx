@@ -258,7 +258,7 @@ export default function Settings() {
     sessionDuration !== (settings?.default_session_duration || 25);
 
   return (
-    <div className="min-h-screen bg-background p-6 pb-24">
+    <div className="min-h-dvh bg-background p-6 pb-24 overflow-y-auto">
       <div className="max-w-lg mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
