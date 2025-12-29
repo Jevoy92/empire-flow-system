@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, ChevronUp, ChevronDown, Sparkles, MessageCircle, ListPlus } from 'lucide-react';
+import { Send, ChevronUp, ChevronDown, Mic, Square, MessageCircle, ListPlus } from 'lucide-react';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 
 interface Task {
   id: string;
@@ -55,6 +56,7 @@ export function SessionAssistant({
   const [isExpanded, setIsExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceRecorder();
 
   useEffect(() => {
     if (isExpanded) {
@@ -102,10 +104,11 @@ export function SessionAssistant({
     return content.replace(/\[ACTION\].*?\[\/ACTION\]/g, '').trim();
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+  const sendMessage = async (messageText?: string) => {
+    const textToSend = messageText || input.trim();
+    if (!textToSend || isLoading) return;
 
-    const userMessage: Message = { role: 'user', content: input.trim() };
+    const userMessage: Message = { role: 'user', content: textToSend };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput('');
@@ -195,28 +198,46 @@ export function SessionAssistant({
     }
   };
 
+  const handleMicPress = async () => {
+    if (isRecording) {
+      const text = await stopRecording();
+      if (text) {
+        setInput(text);
+        // Auto-send after transcription
+        setTimeout(() => sendMessage(text), 100);
+      }
+    } else {
+      await startRecording();
+    }
+  };
+
   const recentMessages = messages.slice(-4);
 
   const handleQuickAction = (label: string) => {
-    setInput(label);
-    setTimeout(() => sendMessage(), 50);
+    sendMessage(label);
   };
 
   return (
     <div className="card-elevated overflow-hidden mt-4 border border-primary/10">
-      {/* Header with AI presence indicator */}
+      {/* Header with AI presence indicator - Always breathing */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/30 transition-colors"
       >
-        <div className="flex items-center gap-2.5 text-sm">
-          {/* AI presence indicator with subtle glow */}
-          <div className={`relative flex items-center justify-center ${isLoading ? 'animate-pulse-subtle' : ''}`}>
-            <div className={`absolute inset-0 w-6 h-6 rounded-full bg-primary/20 ${isLoading ? 'animate-glow' : ''}`} />
-            <Sparkles className="w-4 h-4 text-primary relative z-10" />
+        <div className="flex items-center gap-3 text-sm">
+          {/* AI presence indicator with always-on breathing animation */}
+          <div className="relative flex items-center justify-center">
+            {/* Outer ripple (subtle, always on) */}
+            <div className="absolute w-8 h-8 rounded-full bg-primary/10 animate-ripple" />
+            {/* Breathing ring */}
+            <div className={`absolute w-6 h-6 rounded-full bg-primary/20 ${isLoading ? 'animate-pulse-subtle' : 'animate-breathe'}`} />
+            {/* Glow effect */}
+            <div className={`absolute w-5 h-5 rounded-full ${isLoading ? 'bg-primary/40 animate-glow' : 'bg-primary/30'}`} />
+            {/* Core dot */}
+            <div className="relative w-2.5 h-2.5 rounded-full bg-primary" />
           </div>
           <span className="text-muted-foreground">
-            {isLoading ? 'AI is thinking...' : 'AI is with you'}
+            {isLoading ? 'AI is thinking...' : 'AI is ready'}
           </span>
           {messages.length > 0 && !isLoading && (
             <span className="text-xs text-muted-foreground/60">
@@ -255,6 +276,19 @@ export function SessionAssistant({
         </div>
       )}
 
+      {/* Recording Status */}
+      {(isRecording || isProcessing) && (
+        <div className="px-4 py-2 border-t border-border text-center text-sm text-muted-foreground">
+          {isRecording && (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+              Recording... tap mic to stop
+            </span>
+          )}
+          {isProcessing && 'Processing audio...'}
+        </div>
+      )}
+
       {/* Quick action chips (shown when no messages or collapsed) */}
       {messages.length === 0 && (
         <div className="px-3 py-2 border-t border-border flex items-center gap-2">
@@ -271,7 +305,7 @@ export function SessionAssistant({
         </div>
       )}
 
-      {/* Input */}
+      {/* Input with voice */}
       <div className="px-3 py-2 border-t border-border flex items-center gap-2">
         <input
           ref={inputRef}
@@ -281,11 +315,30 @@ export function SessionAssistant({
           onKeyDown={handleKeyDown}
           placeholder="Tell AI what to add or complete..."
           className="flex-1 px-3 py-2 rounded-lg bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-secondary transition-colors"
-          disabled={isLoading}
+          disabled={isLoading || isRecording || isProcessing}
         />
+        
+        {/* Mic button */}
         <button
-          onClick={sendMessage}
-          disabled={isLoading || !input.trim()}
+          onClick={handleMicPress}
+          disabled={isLoading || isProcessing}
+          className={`p-2 rounded-lg transition-all ${
+            isRecording 
+              ? 'bg-destructive text-destructive-foreground animate-recording' 
+              : 'bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground'
+          }`}
+        >
+          {isRecording ? (
+            <Square className="w-4 h-4" />
+          ) : (
+            <Mic className="w-4 h-4" />
+          )}
+        </button>
+
+        {/* Send button */}
+        <button
+          onClick={() => sendMessage()}
+          disabled={isLoading || !input.trim() || isRecording}
           className="p-2 rounded-lg bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-105 transition-all"
         >
           <Send className="w-4 h-4" />
