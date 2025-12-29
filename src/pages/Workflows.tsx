@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Layers, Play, Trash2, Plus, Pencil, X, Eye, ChevronDown, ChevronRight, FolderOpen, ListChecks, CheckCircle2, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { TemplateEditModal } from '@/components/TemplateEditModal';
 import { ProjectCreateModal } from '@/components/ProjectCreateModal';
 import { ProjectCard } from '@/components/ProjectCard';
@@ -15,6 +15,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
+import { useDemo, DemoTemplate, DemoProject, DemoProjectStage } from '@/contexts/DemoContext';
+import { toast } from 'sonner';
 
 interface Template {
   id: string;
@@ -78,8 +80,13 @@ const TAB_LABELS: Record<TabType, string> = {
 export default function Workflows() {
   // All hooks must be called unconditionally at the top
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer();
+  const demo = useDemo();
+  
+  const isDemo = location.search.includes('demo=1');
+  const demoSuffix = isDemo ? '?demo=1' : '';
   
   const [templates, setTemplates] = useState<Template[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -92,44 +99,50 @@ export default function Workflows() {
   const [visibleTabs, setVisibleTabs] = useState<TabType[]>(['personal', 'projects', 'business']);
   const [activeTab, setActiveTab] = useState<TabType>('personal');
 
-  // Auth check handled by ProtectedRoute
-
   useEffect(() => {
-    const init = async () => {
-      if (!user?.id) return;
-
-      // Load user settings for visible tabs
-      const { data: settings } = await supabase
-        .from('user_settings')
-        .select('visible_template_tabs')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (settings?.visible_template_tabs) {
-        const tabs = settings.visible_template_tabs as TabType[];
-        setVisibleTabs(tabs);
-        if (tabs.length > 0 && !tabs.includes(activeTab)) {
-          setActiveTab(tabs[0]);
-        }
-      }
-
-      await Promise.all([loadTemplates(), loadProjects(), loadProjectTemplates()]);
+    if (isDemo && demo) {
+      // Use demo data
+      setTemplates(demo.templates as Template[]);
+      setProjects(demo.projects as Project[]);
+      setProjectTemplates([]);
       setLoading(false);
-    };
+    } else {
+      const init = async () => {
+        if (!user?.id) return;
 
-    init();
+        // Load user settings for visible tabs
+        const { data: settings } = await supabase
+          .from('user_settings')
+          .select('visible_template_tabs')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        if (settings?.visible_template_tabs) {
+          const tabs = settings.visible_template_tabs as TabType[];
+          setVisibleTabs(tabs);
+          if (tabs.length > 0 && !tabs.includes(activeTab)) {
+            setActiveTab(tabs[0]);
+          }
+        }
 
-    // Set up realtime subscription for templates
-    const channel = supabase
-      .channel('workflows-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'templates' }, () => loadTemplates())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => loadProjects())
-      .subscribe();
+        await Promise.all([loadTemplates(), loadProjects(), loadProjectTemplates()]);
+        setLoading(false);
+      };
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
+      init();
+
+      // Set up realtime subscription for templates
+      const channel = supabase
+        .channel('workflows-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'templates' }, () => loadTemplates())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => loadProjects())
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user, isDemo, demo]);
 
   const loadTemplates = async () => {
     const { data, error } = await supabase
@@ -175,7 +188,7 @@ export default function Workflows() {
   };
 
   const saveVisibleTabs = async (tabs: TabType[]) => {
-    if (!user?.id) return;
+    if (!user?.id || isDemo) return;
     await supabase
       .from('user_settings')
       .update({ visible_template_tabs: tabs })
@@ -203,10 +216,12 @@ export default function Workflows() {
   const hiddenTabs = ALL_TABS.filter(t => !visibleTabs.includes(t));
 
   const useTemplate = async (template: Template) => {
-    await supabase
-      .from('templates')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('id', template.id);
+    if (!isDemo) {
+      await supabase
+        .from('templates')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('id', template.id);
+    }
 
     const initialTasks = (template.default_tasks || []).map((task, idx) => ({
       id: `task-${idx}`,
@@ -214,7 +229,7 @@ export default function Workflows() {
       completed: false,
     }));
 
-    navigate('/session', {
+    navigate('/session' + demoSuffix, {
       state: {
         venture: template.venture,
         workType: template.work_type,
@@ -226,6 +241,10 @@ export default function Workflows() {
   };
 
   const deleteTemplate = async (id: string) => {
+    if (isDemo) {
+      toast.info("In demo mode, changes don't persist");
+      return;
+    }
     await supabase.from('templates').delete().eq('id', id);
     setTemplates(templates.filter(t => t.id !== id));
   };
@@ -237,16 +256,30 @@ export default function Workflows() {
   };
 
   const handleCreateSingleStage = () => {
+    if (isDemo) {
+      toast.info("Sign up to create your own workflows!");
+      return;
+    }
     setEditingTemplate(null);
     setIsCreating(true);
     setIsEditModalOpen(true);
   };
 
   const handleCreateMultiStage = () => {
+    if (isDemo) {
+      toast.info("Sign up to create your own projects!");
+      return;
+    }
     setShowProjectModal(true);
   };
 
   const handleSaveTemplate = async (templateData: Partial<Template>) => {
+    if (isDemo) {
+      toast.info("In demo mode, changes don't persist");
+      setIsEditModalOpen(false);
+      return;
+    }
+    
     if (isCreating) {
       if (!user?.id) return;
       const { data, error } = await supabase
@@ -297,7 +330,7 @@ export default function Workflows() {
     const currentStage = project.stages[project.current_stage];
     if (!currentStage) return;
 
-    navigate('/session', {
+    navigate('/session' + demoSuffix, {
       state: {
         venture: currentStage.venture || project.venture,
         workType: currentStage.work_type,
@@ -433,8 +466,8 @@ export default function Workflows() {
     );
   };
 
-  // Show loading while checking auth
-  if (authLoading) {
+  // Show loading while checking auth (skip in demo mode)
+  if (authLoading && !isDemo) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -442,7 +475,7 @@ export default function Workflows() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isDemo) {
     return null;
   }
 
@@ -500,138 +533,103 @@ export default function Workflows() {
           </DropdownMenu>
         </div>
 
-        {/* Hierarchy Explainer - for new users or empty state */}
-        {templates.length === 0 && projects.length === 0 && (
-          <WorkflowHierarchyExplainer 
-            isOpen={showHierarchyExplainer} 
-            onDismiss={dismissHierarchyExplainer} 
-          />
-        )}
+        {/* Workflow Hierarchy Explainer */}
+        <WorkflowHierarchyExplainer 
+          isOpen={showHierarchyExplainer} 
+          onDismiss={dismissHierarchyExplainer}
+        />
 
-        {/* Active Multi-Stage Projects Section */}
+        {/* Active Projects Section */}
         {projects.length > 0 && (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                <FolderOpen className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
-                  Active Projects
-                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                </h2>
-                <p className="text-xs text-muted-foreground">Multi-stage workflows with multiple phases</p>
-              </div>
+              <FolderOpen className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-medium text-foreground">Active Projects</h2>
+              <span className="text-sm text-muted-foreground">({projects.length})</span>
             </div>
-            <div className="space-y-4">
-              {projects.map((project) => (
+            <div className="space-y-3">
+              {projects.map(project => (
                 <ProjectCard
                   key={project.id}
                   project={project}
                   onContinue={() => handleContinueProject(project)}
-                  onRefresh={loadProjects}
                 />
               ))}
             </div>
           </div>
         )}
 
-        {/* Saved Single-Stage Workflows Section */}
+        {/* Single-Stage Workflows Section */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-              <ListChecks className="w-4 h-4 text-foreground" />
-            </div>
-            <div>
-              <h2 className="text-sm font-medium text-foreground">
-                Single-Stage Workflows
-              </h2>
-              <p className="text-xs text-muted-foreground">Quick tasks and routines</p>
-            </div>
+            <ListChecks className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-medium text-foreground">Single-Stage Workflows</h2>
           </div>
 
-          {templates.length === 0 && projectTemplates.length === 0 ? (
-            <div className="card-elevated p-8 text-center">
-              <Layers className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">No saved workflows yet.</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Create a workflow to get started.
-              </p>
-            </div>
-          ) : (
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="w-full">
-              <div className="flex items-center gap-2 mb-4">
-                <TabsList className={`grid w-full ${
-                  visibleTabs.length === 1 ? 'grid-cols-1' : 
-                  visibleTabs.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
-                }`}>
-                  {visibleTabs.map(tab => (
-                    <TabsTrigger key={tab} value={tab} className="gap-1.5 group relative">
-                      {TAB_LABELS[tab]}
-                      <span className="text-xs text-muted-foreground">({getTemplatesForTab(tab).length})</span>
-                      {visibleTabs.length > 1 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            hideTab(tab);
-                          }}
-                          className="absolute -top-1 -right-1 p-0.5 rounded-full bg-muted hover:bg-destructive/20 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title={`Hide ${TAB_LABELS[tab]} tab`}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                
-                {hiddenTabs.length > 0 && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {hiddenTabs.map(tab => (
-                        <DropdownMenuItem key={tab} onClick={() => showTab(tab)}>
-                          Show {TAB_LABELS[tab]}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
+            <div className="flex items-center gap-2 mb-4">
+              <TabsList className="flex-1">
+                {visibleTabs.map(tab => (
+                  <TabsTrigger key={tab} value={tab} className="flex-1">
+                    {TAB_LABELS[tab]}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
               
-              {visibleTabs.map(tab => (
-                <TabsContent key={tab} value={tab} className="mt-0">
+              {hiddenTabs.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="p-2 rounded-lg hover:bg-secondary text-muted-foreground">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {hiddenTabs.map(tab => (
+                      <DropdownMenuItem key={tab} onClick={() => showTab(tab)}>
+                        Show {TAB_LABELS[tab]}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+
+            {visibleTabs.map(tab => (
+              <TabsContent key={tab} value={tab}>
+                <div className="relative">
+                  {visibleTabs.length > 1 && (
+                    <button
+                      onClick={() => hideTab(tab)}
+                      className="absolute -top-10 right-12 p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground text-xs flex items-center gap-1"
+                      title={`Hide ${TAB_LABELS[tab]} tab`}
+                    >
+                      <X className="w-3 h-3" />
+                      Hide
+                    </button>
+                  )}
                   {renderTemplateList(getTemplatesForTab(tab))}
-                </TabsContent>
-              ))}
-            </Tabs>
-          )}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
         </div>
+
+        {/* Template Edit Modal */}
+        <TemplateEditModal
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          template={editingTemplate}
+          onSave={handleSaveTemplate}
+          isCreating={isCreating}
+        />
+
+        {/* Project Create Modal */}
+        <ProjectCreateModal
+          open={showProjectModal}
+          onOpenChange={setShowProjectModal}
+          projectTemplates={projectTemplates}
+        />
       </div>
-
-      {/* Modals */}
-      <TemplateEditModal
-        template={editingTemplate}
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={handleSaveTemplate}
-        isNew={isCreating}
-      />
-
-      <ProjectCreateModal
-        isOpen={showProjectModal}
-        onClose={() => setShowProjectModal(false)}
-        onCreated={() => {
-          setShowProjectModal(false);
-          loadProjects();
-          loadProjectTemplates();
-        }}
-        templates={projectTemplates}
-      />
     </div>
   );
 }

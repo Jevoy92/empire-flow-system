@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { Clock, CheckCircle, XCircle, Play } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useDemo, DemoSession } from '@/contexts/DemoContext';
 
 interface Session {
   id: string;
@@ -28,6 +29,10 @@ const ventureColors: Record<string, string> = {
   'admin-life': 'bg-venture-admin',
   'transition': 'bg-venture-transition',
   'care-relationships': 'bg-venture-care',
+  'side-project': 'bg-primary',
+  'learning': 'bg-blue-500',
+  'creative': 'bg-purple-500',
+  'business': 'bg-emerald-500',
 };
 
 const ventureNames: Record<string, string> = {
@@ -40,36 +45,51 @@ const ventureNames: Record<string, string> = {
   'admin-life': 'Admin Life',
   'transition': 'Transition',
   'care-relationships': 'Care & Relationships',
+  'side-project': 'Side Project',
+  'learning': 'Learning',
+  'creative': 'Creative',
+  'business': 'Business',
 };
 
 export default function History() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
+  const demo = useDemo();
+  
+  const isDemo = location.search.includes('demo=1');
+  const demoSuffix = isDemo ? '?demo=1' : '';
 
   useEffect(() => {
-    loadSessions();
+    if (isDemo && demo) {
+      // Use demo sessions
+      setSessions(demo.sessions as Session[]);
+      setLoading(false);
+    } else {
+      loadSessions();
 
-    // Set up realtime subscription
-    const channel = supabase
-      .channel('sessions-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sessions'
-        },
-        () => {
-          loadSessions();
-        }
-      )
-      .subscribe();
+      // Set up realtime subscription
+      const channel = supabase
+        .channel('sessions-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'sessions'
+          },
+          () => {
+            loadSessions();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [isDemo, demo]);
 
   const loadSessions = async () => {
     const { data, error } = await supabase
@@ -95,7 +115,7 @@ export default function History() {
       focus: session.focus,
       completionCondition: session.completion_condition,
     }));
-    navigate('/');
+    navigate('/' + demoSuffix);
   };
 
   const formatDuration = (minutes: number | null) => {
