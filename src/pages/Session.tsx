@@ -77,6 +77,18 @@ export default function Session() {
     setView('shutdown');
   };
 
+  // Handle real-time task updates for persistence
+  const handleTasksChange = async (tasks: { id: string; text: string; completed: boolean }[]) => {
+    setSessionTasks(tasks);
+    
+    if (sessionId) {
+      await supabase
+        .from('sessions')
+        .update({ tasks })
+        .eq('id', sessionId);
+    }
+  };
+
   const handleAbort = async () => {
     if (sessionId) {
       await supabase
@@ -122,16 +134,17 @@ export default function Session() {
     <div className="min-h-screen bg-background">
       {view === 'session' && (
         <div className="min-h-screen flex items-center justify-center p-8">
-          <WorkSession
-            venture={sessionConfig.venture}
-            workType={sessionConfig.workType}
-            focus={sessionConfig.focus}
-            completionCondition={sessionConfig.completionCondition}
-            initialTasks={sessionConfig.initialTasks}
-            startTime={startTime}
-            onComplete={handleSessionComplete}
-            onAbort={handleAbort}
-          />
+            <WorkSession
+              venture={sessionConfig.venture}
+              workType={sessionConfig.workType}
+              focus={sessionConfig.focus}
+              completionCondition={sessionConfig.completionCondition}
+              initialTasks={sessionConfig.initialTasks}
+              startTime={startTime}
+              onComplete={handleSessionComplete}
+              onAbort={handleAbort}
+              onTasksChange={handleTasksChange}
+            />
         </div>
       )}
 

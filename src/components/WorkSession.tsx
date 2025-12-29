@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { VentureId } from '@/types/empire';
 import { ventures, defaultTasks, getCategoryById } from '@/data/ventures';
 import { X, Plus, Trash2, Check, RotateCcw, Square, Pause, Play } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CircularProgress } from './CircularProgress';
+import { SessionAssistant } from './SessionAssistant';
 
-interface Task {
+export interface Task {
   id: string;
   text: string;
   completed: boolean;
@@ -20,9 +21,10 @@ interface WorkSessionProps {
   startTime: Date;
   onComplete: (tasks: Task[]) => void;
   onAbort: () => void;
+  onTasksChange?: (tasks: Task[]) => void;
 }
 
-export function WorkSession({ venture, workType, focus, completionCondition, initialTasks, startTime, onComplete, onAbort }: WorkSessionProps) {
+export function WorkSession({ venture, workType, focus, completionCondition, initialTasks, startTime, onComplete, onAbort, onTasksChange }: WorkSessionProps) {
   const ventureData = ventures.find(v => v.id === venture);
   const categoryData = getCategoryById(venture);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -87,6 +89,11 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   const completedCount = tasks.filter(t => t.completed).length;
   const progress = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
 
+  // Notify parent of task changes
+  useEffect(() => {
+    onTasksChange?.(tasks);
+  }, [tasks, onTasksChange]);
+
   const toggleTask = (id: string) => {
     setTasks(tasks.map(t => 
       t.id === id ? { ...t, completed: !t.completed } : t
@@ -108,6 +115,47 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   const removeTask = (id: string) => {
     setTasks(tasks.filter(t => t.id !== id));
   };
+
+  // AI-triggered task mutations
+  const handleAIAddTasks = useCallback((newTasks: string[]) => {
+    setTasks(prev => [
+      ...prev,
+      ...newTasks.map((text, idx) => ({
+        id: `task-ai-${Date.now()}-${idx}`,
+        text,
+        completed: false,
+      })),
+    ]);
+  }, []);
+
+  const handleAICompleteTasks = useCallback((matches: string[]) => {
+    setTasks(prev =>
+      prev.map(t => {
+        const shouldComplete = matches.some(match =>
+          t.text.toLowerCase().includes(match.toLowerCase())
+        );
+        return shouldComplete ? { ...t, completed: true } : t;
+      })
+    );
+  }, []);
+
+  const handleAIRemoveTasks = useCallback((matches: string[]) => {
+    setTasks(prev =>
+      prev.filter(t => !matches.some(match =>
+        t.text.toLowerCase().includes(match.toLowerCase())
+      ))
+    );
+  }, []);
+
+  const handleAIUpdateTask = useCallback((match: string, newText: string) => {
+    setTasks(prev =>
+      prev.map(t =>
+        t.text.toLowerCase().includes(match.toLowerCase())
+          ? { ...t, text: newText }
+          : t
+      )
+    );
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -280,6 +328,22 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
           </button>
         )}
       </div>
+
+      {/* AI Session Assistant */}
+      <SessionAssistant
+        sessionContext={{
+          venture: ventureData?.name || venture,
+          workType,
+          focus,
+          completionCondition,
+          tasks,
+          elapsedMinutes: Math.floor(elapsedSeconds / 60),
+        }}
+        onAddTasks={handleAIAddTasks}
+        onCompleteTasks={handleAICompleteTasks}
+        onRemoveTasks={handleAIRemoveTasks}
+        onUpdateTask={handleAIUpdateTask}
+      />
 
       {/* Completion Condition */}
       <div className="mt-4 text-center text-xs text-muted-foreground">
