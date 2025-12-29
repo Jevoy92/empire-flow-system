@@ -207,6 +207,57 @@ export type Database = {
           },
         ]
       }
+      user_stats: {
+        Row: {
+          achievements_unlocked: string[]
+          created_at: string
+          current_streak: number
+          id: string
+          last_session_date: string | null
+          longest_streak: number
+          notes_read: number
+          notes_sent: number
+          templates_created: number
+          total_minutes_worked: number
+          total_sessions_completed: number
+          total_tasks_completed: number
+          unique_categories_used: string[]
+          updated_at: string
+        }
+        Insert: {
+          achievements_unlocked?: string[]
+          created_at?: string
+          current_streak?: number
+          id: string
+          last_session_date?: string | null
+          longest_streak?: number
+          notes_read?: number
+          notes_sent?: number
+          templates_created?: number
+          total_minutes_worked?: number
+          total_sessions_completed?: number
+          total_tasks_completed?: number
+          unique_categories_used?: string[]
+          updated_at?: string
+        }
+        Update: {
+          achievements_unlocked?: string[]
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_session_date?: string | null
+          longest_streak?: number
+          notes_read?: number
+          notes_sent?: number
+          templates_created?: number
+          total_minutes_worked?: number
+          total_sessions_completed?: number
+          total_tasks_completed?: number
+          unique_categories_used?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
