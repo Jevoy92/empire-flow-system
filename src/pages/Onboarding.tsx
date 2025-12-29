@@ -29,13 +29,31 @@ export default function Onboarding() {
     }
   }, [isAuthenticated, profile, loading, navigate]);
 
-  const handleComplete = async (templates: TemplateData[]) => {
+  const handleComplete = async (templates: TemplateData[], lastApprovedTemplate?: TemplateData) => {
     await completeOnboarding();
     toast({
       title: 'Welcome aboard! 🎉',
       description: `Your workspace is ready with ${templates.length} custom templates.`,
     });
-    navigate('/');
+    
+    // If we have an approved template, go directly to a session with it
+    if (lastApprovedTemplate) {
+      navigate('/session', {
+        state: {
+          venture: lastApprovedTemplate.venture,
+          workType: lastApprovedTemplate.work_type,
+          focus: lastApprovedTemplate.default_focus,
+          completionCondition: 'task-based',
+          initialTasks: lastApprovedTemplate.default_tasks.map((text, i) => ({
+            id: `task-${i}`,
+            text,
+            completed: false,
+          })),
+        }
+      });
+    } else {
+      navigate('/');
+    }
   };
 
   if (loading) {

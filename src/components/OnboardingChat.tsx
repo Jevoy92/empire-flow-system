@@ -24,7 +24,7 @@ interface Message {
 interface OnboardingChatProps {
   userId: string;
   userName?: string;
-  onComplete: (templates: TemplateData[]) => void;
+  onComplete: (templates: TemplateData[], lastApprovedTemplate?: TemplateData) => void;
 }
 
 export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatProps) {
@@ -33,6 +33,7 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
   const [isLoading, setIsLoading] = useState(false);
   const [savedTemplates, setSavedTemplates] = useState<Set<string>>(new Set());
   const [allTemplates, setAllTemplates] = useState<TemplateData[]>([]);
+  const [lastApprovedTemplate, setLastApprovedTemplate] = useState<TemplateData | undefined>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -228,6 +229,7 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
       if (error) throw error;
 
       setSavedTemplates(prev => new Set([...prev, templateKey]));
+      setLastApprovedTemplate(template);
       
       toast({
         title: 'Template saved!',
@@ -244,7 +246,7 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
   };
 
   const handleFinish = () => {
-    onComplete(allTemplates);
+    onComplete(allTemplates, lastApprovedTemplate);
   };
 
   const hasApprovedTemplates = savedTemplates.size > 0;
@@ -321,7 +323,7 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
           <div className="mb-3 text-center">
             <Button onClick={handleFinish} className="gap-2">
               <Sparkles className="w-4 h-4" />
-              Start Working ({savedTemplates.size} templates saved)
+              Start a Session →
             </Button>
           </div>
         )}
