@@ -269,11 +269,11 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
                 </div>
               )}
               
-              {/* Message bubble */}
-              <div className={`rounded-2xl px-4 py-3 ${
+              {/* Message bubble with subtle animation */}
+              <div className={`rounded-2xl px-4 py-3 animate-message-in ${
                 message.role === 'user' 
                   ? 'bg-primary text-primary-foreground rounded-br-md' 
-                  : 'bg-muted text-foreground rounded-bl-md'
+                  : 'bg-muted text-foreground rounded-bl-md border-l-2 border-primary/20'
               }`}>
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               </div>
@@ -295,14 +295,18 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
           </div>
         ))}
 
-        {/* Typing indicator */}
+        {/* Typing indicator - calmer pulsing style */}
         {isLoading && messages.length > 0 && (
-          <div className="flex justify-start">
-            <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
-              <div className="flex gap-1">
-                <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          <div className="flex justify-start animate-message-in">
+            <div className="max-w-[85%]">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center animate-pulse-subtle">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">Focus AI</span>
+              </div>
+              <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3 border-l-2 border-primary/20">
+                <span className="text-sm text-muted-foreground animate-pulse-subtle">Thinking...</span>
               </div>
             </div>
           </div>

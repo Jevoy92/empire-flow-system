@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, ChevronUp, ChevronDown, Sparkles } from 'lucide-react';
+import { Send, ChevronUp, ChevronDown, Sparkles, MessageCircle, ListPlus } from 'lucide-react';
 
 interface Task {
   id: string;
@@ -36,6 +36,11 @@ interface SessionAssistantProps {
   onRemoveTasks: (matches: string[]) => void;
   onUpdateTask: (match: string, newText: string) => void;
 }
+
+const quickActions = [
+  { label: "What's next?", icon: MessageCircle },
+  { label: "Add a task", icon: ListPlus },
+];
 
 export function SessionAssistant({
   sessionContext,
@@ -192,19 +197,30 @@ export function SessionAssistant({
 
   const recentMessages = messages.slice(-4);
 
+  const handleQuickAction = (label: string) => {
+    setInput(label);
+    setTimeout(() => sendMessage(), 50);
+  };
+
   return (
-    <div className="card-elevated overflow-hidden mt-4">
-      {/* Header */}
+    <div className="card-elevated overflow-hidden mt-4 border border-primary/10">
+      {/* Header with AI presence indicator */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/50 transition-colors"
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/30 transition-colors"
       >
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span>AI Assistant</span>
-          {messages.length > 0 && (
-            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-              {messages.length} messages
+        <div className="flex items-center gap-2.5 text-sm">
+          {/* AI presence indicator with subtle glow */}
+          <div className={`relative flex items-center justify-center ${isLoading ? 'animate-pulse-subtle' : ''}`}>
+            <div className={`absolute inset-0 w-6 h-6 rounded-full bg-primary/20 ${isLoading ? 'animate-glow' : ''}`} />
+            <Sparkles className="w-4 h-4 text-primary relative z-10" />
+          </div>
+          <span className="text-muted-foreground">
+            {isLoading ? 'AI is thinking...' : 'AI is with you'}
+          </span>
+          {messages.length > 0 && !isLoading && (
+            <span className="text-xs text-muted-foreground/60">
+              • {messages.length} messages
             </span>
           )}
         </div>
@@ -221,19 +237,37 @@ export function SessionAssistant({
           {recentMessages.map((msg, idx) => (
             <div
               key={idx}
-              className={`py-1.5 text-sm ${
+              className={`py-2 text-sm animate-message-in ${
                 msg.role === 'user'
                   ? 'text-foreground'
-                  : 'text-muted-foreground'
+                  : 'text-muted-foreground border-l-2 border-primary/30 pl-3 ml-1'
               }`}
             >
-              <span className="font-medium">
-                {msg.role === 'user' ? 'You: ' : 'AI: '}
+              <span className="font-medium text-xs uppercase tracking-wide opacity-60 block mb-0.5">
+                {msg.role === 'user' ? 'You' : 'AI'}
               </span>
-              {msg.content || (isLoading && idx === recentMessages.length - 1 ? '...' : '')}
+              {msg.content || (isLoading && idx === recentMessages.length - 1 ? (
+                <span className="animate-pulse-subtle">Thinking...</span>
+              ) : '')}
             </div>
           ))}
           <div ref={messagesEndRef} />
+        </div>
+      )}
+
+      {/* Quick action chips (shown when no messages or collapsed) */}
+      {messages.length === 0 && (
+        <div className="px-3 py-2 border-t border-border flex items-center gap-2">
+          {quickActions.map((action) => (
+            <button
+              key={action.label}
+              onClick={() => handleQuickAction(action.label)}
+              className="px-3 py-1.5 rounded-lg bg-secondary/50 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-1.5"
+            >
+              <action.icon className="w-3 h-3" />
+              {action.label}
+            </button>
+          ))}
         </div>
       )}
 
@@ -246,7 +280,7 @@ export function SessionAssistant({
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Tell AI what to add or complete..."
-          className="flex-1 px-3 py-2 rounded-lg bg-secondary text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="flex-1 px-3 py-2 rounded-lg bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-secondary transition-colors"
           disabled={isLoading}
         />
         <button

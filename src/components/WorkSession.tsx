@@ -195,7 +195,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto px-4 animate-fade-in">
+    <div className="w-full max-w-lg mx-auto px-4 animate-fade-in bg-session-warm min-h-screen py-6 -mt-6 -mx-4 px-8">
       {/* Task Context Card */}
       <div className="card-elevated p-4 mb-6">
         <div className="flex items-center gap-3">

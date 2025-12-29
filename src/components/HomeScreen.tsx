@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Layout, Play } from 'lucide-react';
+import { ArrowRight, Play } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Template {
   id: string;
@@ -30,9 +31,18 @@ const ventureColors: Record<string, string> = {
 
 const getGreeting = (): string => {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return 'Morning';
+  if (hour < 17) return 'Afternoon';
+  return 'Evening';
+};
+
+const getContextLine = (): string => {
+  const lines = [
+    'Ready when you are.',
+    'What needs your focus?',
+    'Let\'s get something done.',
+  ];
+  return lines[Math.floor(Math.random() * lines.length)];
 };
 
 const getVentureColor = (venture: string): string => {
@@ -42,7 +52,9 @@ const getVentureColor = (venture: string): string => {
 export function HomeScreen({ onStartSession }: HomeScreenProps) {
   const [recentTemplates, setRecentTemplates] = useState<Template[]>([]);
   const [greeting, setGreeting] = useState(getGreeting());
+  const [contextLine] = useState(getContextLine());
   const navigate = useNavigate();
+  const { profile } = useAuth();
 
   useEffect(() => {
     loadRecentTemplates();
@@ -94,24 +106,26 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     });
   };
 
+  const firstName = profile?.display_name?.split(' ')[0];
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-8 pb-24">
+    <div className="min-h-screen flex items-center justify-center p-8 pb-24 bg-warm-gradient">
       <div className="w-full max-w-md animate-fade-in">
         <div className="card-elevated p-12">
-          <p className="text-muted-foreground text-sm mb-1">{greeting}</p>
-          <h1 className="text-2xl font-semibold text-foreground mb-3">
-            What are you working on?
+          {/* Personalized greeting */}
+          <h1 className="text-2xl font-semibold text-foreground mb-2">
+            {greeting}{firstName ? `, ${firstName}` : ''}.
           </h1>
           <p className="text-muted-foreground mb-10">
-            Start a session to focus on a single task.
+            {contextLine}
           </p>
           
           <button
             onClick={onStartSession}
-            className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-3"
+            className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-3 group"
           >
             Start a Work Session
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
           </button>
         </div>
 
