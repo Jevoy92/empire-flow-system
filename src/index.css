@@ -44,6 +44,11 @@
     /* Session Colors */
     --session-warm: 35 100% 97%;
 
+    /* Category Type Colors */
+    --category-personal: 174 65% 45%;
+    --category-projects: 35 85% 50%;
+    --category-business: 248 85% 65%;
+
     /* Venture Colors */
     --venture-palmer: 217 85% 55%;
     --venture-besettld: 174 65% 50%;
@@ -328,5 +333,69 @@
   50% { 
     opacity: 0.6;
     transform: scale(1.1);
+  }
+}
+
+/* Gamification Animations */
+@keyframes celebrate-pop {
+  0% { 
+    transform: scale(1);
+  }
+  50% { 
+    transform: scale(1.15);
+  }
+  100% { 
+    transform: scale(1);
+  }
+}
+
+@keyframes checkmark-draw {
+  0% { 
+    stroke-dashoffset: 20;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% { 
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100px) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes celebration-burst {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-20px);
+    opacity: 0;
   }
 }
