@@ -589,7 +589,7 @@ export default function Settings() {
               <DeleteAccountDialog
                 open={showDeleteAccount}
                 onOpenChange={setShowDeleteAccount}
-                userId={user.id}
+                userEmail={user.email || ''}
                 onDeleted={handleAccountDeleted}
               />
             )}
