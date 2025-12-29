@@ -150,7 +150,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
   const [input, setInput] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { isRecording, isProcessing, partialText, startRecording, stopRecording, error } = useVoiceRecorder();
   const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer();
   const demo = useDemo();
@@ -193,6 +193,16 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     }
   };
 
+  // Clear state when user changes to prevent data leakage
+  useEffect(() => {
+    if (!isDemo) {
+      // Clear previous user's data immediately when user changes
+      setRecentTemplates([]);
+      setActiveProjects([]);
+      setFutureNotes([]);
+    }
+  }, [user?.id, isDemo]);
+
   useEffect(() => {
     if (isDemo && demo) {
       // Use demo data
@@ -205,12 +215,13 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
         stages: p.stages,
       })));
       setFutureNotes(demo.futureNotes as FutureNote[]);
-    } else {
+    } else if (user?.id) {
+      // Only fetch data if we have a valid user
       loadRecentTemplates();
       loadFutureNotes();
       loadActiveProjects();
     }
-  }, [isDemo, demo]);
+  }, [isDemo, demo, user?.id]);
 
   const loadRecentTemplates = async () => {
     const { data } = await supabase
