@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Sparkles } from 'lucide-react';
+import { Send, Loader2, Sparkles, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TemplatePreviewCard } from './TemplatePreviewCard';
+import { ProjectPreviewCard } from './ProjectPreviewCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,11 +15,26 @@ interface TemplateData {
   default_tasks: string[];
 }
 
+interface ProjectStage {
+  name: string;
+  workType: string;
+  defaultFocus: string;
+  defaultTasks: string[];
+}
+
+interface ProjectData {
+  name: string;
+  venture: string;
+  description: string;
+  stages: ProjectStage[];
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   templates?: TemplateData[];
+  projects?: ProjectData[];
 }
 
 interface OnboardingChatProps {
@@ -32,6 +48,7 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [savedTemplates, setSavedTemplates] = useState<Set<string>>(new Set());
+  const [savedProjects, setSavedProjects] = useState<Set<string>>(new Set());
   const [allTemplates, setAllTemplates] = useState<TemplateData[]>([]);
   const [lastApprovedTemplate, setLastApprovedTemplate] = useState<TemplateData | undefined>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -51,13 +68,15 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
     startConversation();
   }, []);
 
-  const parseTemplatesFromContent = (content: string): { text: string; templates: TemplateData[] } => {
+  const parseContentBlocks = (content: string): { text: string; templates: TemplateData[]; projects: ProjectData[] } => {
     const templates: TemplateData[] = [];
-    const templateRegex = /\[TEMPLATE\](.*?)\[\/TEMPLATE\]/gs;
+    const projects: ProjectData[] = [];
     
     let text = content;
-    let match;
     
+    // Parse templates
+    const templateRegex = /\[TEMPLATE\](.*?)\[\/TEMPLATE\]/gs;
+    let match;
     while ((match = templateRegex.exec(content)) !== null) {
       try {
         const templateData = JSON.parse(match[1]);
@@ -68,7 +87,19 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
       }
     }
     
-    return { text: text.trim(), templates };
+    // Parse projects
+    const projectRegex = /\[PROJECT\](.*?)\[\/PROJECT\]/gs;
+    while ((match = projectRegex.exec(content)) !== null) {
+      try {
+        const projectData = JSON.parse(match[1]);
+        projects.push(projectData);
+        text = text.replace(match[0], '');
+      } catch (e) {
+        console.error('Failed to parse project:', e);
+      }
+    }
+    
+    return { text: text.trim(), templates, projects };
   };
 
   const startConversation = async () => {
@@ -119,7 +150,7 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
     const messageId = Date.now().toString();
 
     // Add empty assistant message that we'll update
-    setMessages(prev => [...prev, { id: messageId, role: 'assistant', content: '', templates: [] }]);
+    setMessages(prev => [...prev, { id: messageId, role: 'assistant', content: '', templates: [], projects: [] }]);
 
     while (true) {
       const { done, value } = await reader.read();
@@ -145,11 +176,11 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
           const content = parsed.choices?.[0]?.delta?.content;
           if (content) {
             fullContent += content;
-            const { text, templates } = parseTemplatesFromContent(fullContent);
+            const { text, templates, projects } = parseContentBlocks(fullContent);
             
             setMessages(prev => prev.map(msg => 
               msg.id === messageId 
-                ? { ...msg, content: text, templates }
+                ? { ...msg, content: text, templates, projects }
                 : msg
             ));
           }
@@ -160,10 +191,10 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
     }
 
     // Final parse
-    const { text, templates } = parseTemplatesFromContent(fullContent);
+    const { text, templates, projects } = parseContentBlocks(fullContent);
     setMessages(prev => prev.map(msg => 
       msg.id === messageId 
-        ? { ...msg, content: text, templates }
+        ? { ...msg, content: text, templates, projects }
         : msg
     ));
 
@@ -193,9 +224,9 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
       // Build conversation history for context
       const history = [...messages, userMessage].map(m => ({
         role: m.role,
-        content: m.content + (m.templates?.map(t => 
-          `[TEMPLATE]${JSON.stringify(t)}[/TEMPLATE]`
-        ).join('') || ''),
+        content: m.content + 
+          (m.templates?.map(t => `[TEMPLATE]${JSON.stringify(t)}[/TEMPLATE]`).join('') || '') +
+          (m.projects?.map(p => `[PROJECT]${JSON.stringify(p)}[/PROJECT]`).join('') || ''),
       }));
 
       await streamMessage(history);
@@ -211,7 +242,7 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
   };
 
   const handleApproveTemplate = async (template: TemplateData, messageId: string, templateIndex: number) => {
-    const templateKey = `${messageId}-${templateIndex}`;
+    const templateKey = `${messageId}-template-${templateIndex}`;
     if (savedTemplates.has(templateKey)) return;
 
     try {
@@ -245,11 +276,51 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
     }
   };
 
+  const handleApproveProject = async (project: ProjectData, messageId: string, projectIndex: number) => {
+    const projectKey = `${messageId}-project-${projectIndex}`;
+    if (savedProjects.has(projectKey)) return;
+
+    try {
+      // Convert project stages to the format expected by project_templates
+      const stages = project.stages.map(stage => ({
+        name: stage.name,
+        workType: stage.workType,
+        defaultFocus: stage.defaultFocus,
+        defaultTasks: stage.defaultTasks,
+      }));
+
+      // Save to project_templates table
+      const { error } = await supabase.from('project_templates').insert({
+        user_id: userId,
+        name: project.name,
+        default_venture: project.venture,
+        description: project.description,
+        stages: stages,
+      });
+
+      if (error) throw error;
+
+      setSavedProjects(prev => new Set([...prev, projectKey]));
+      
+      toast({
+        title: 'Project template saved!',
+        description: `"${project.name}" has been added to your workflows.`,
+      });
+    } catch (error) {
+      console.error('Failed to save project:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to save project template. Please try again.',
+      });
+    }
+  };
+
   const handleFinish = () => {
     onComplete(allTemplates, lastApprovedTemplate);
   };
 
-  const hasApprovedTemplates = savedTemplates.size > 0;
+  const hasApprovedItems = savedTemplates.size > 0 || savedProjects.size > 0;
 
   return (
     <div className="flex flex-col h-full max-h-[80vh]">
@@ -282,13 +353,27 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
 
               {/* Templates */}
               {message.templates && message.templates.length > 0 && (
-                <div className="mt-2">
+                <div className="mt-2 space-y-2">
                   {message.templates.map((template, i) => (
                     <TemplatePreviewCard
-                      key={i}
+                      key={`template-${i}`}
                       template={template}
-                      isApproved={savedTemplates.has(`${message.id}-${i}`)}
+                      isApproved={savedTemplates.has(`${message.id}-template-${i}`)}
                       onApprove={() => handleApproveTemplate(template, message.id, i)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Projects */}
+              {message.projects && message.projects.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  {message.projects.map((project, i) => (
+                    <ProjectPreviewCard
+                      key={`project-${i}`}
+                      project={project}
+                      isApproved={savedProjects.has(`${message.id}-project-${i}`)}
+                      onApprove={() => handleApproveProject(project, message.id, i)}
                     />
                   ))}
                 </div>
@@ -319,7 +404,7 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
 
       {/* Input */}
       <div className="p-4 border-t border-border bg-background">
-        {hasApprovedTemplates && (
+        {hasApprovedItems && (
           <div className="mb-3 text-center">
             <Button onClick={handleFinish} className="gap-2">
               <Sparkles className="w-4 h-4" />

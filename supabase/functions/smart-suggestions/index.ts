@@ -41,7 +41,7 @@ serve(async (req) => {
         .select('venture, work_type, focus, started_at, status')
         .eq('user_id', user.id)
         .order('started_at', { ascending: false })
-        .limit(10),
+        .limit(20), // Increased to detect patterns
       supabase
         .from('templates')
         .select('name, venture, work_type, last_used_at')
@@ -70,6 +70,15 @@ serve(async (req) => {
     }));
     const stats = statsRes.data;
 
+    // Analyze work patterns
+    const workTypeCount: Record<string, number> = {};
+    sessions.forEach(s => {
+      workTypeCount[s.work_type] = (workTypeCount[s.work_type] || 0) + 1;
+    });
+    const repeatedWorkTypes = Object.entries(workTypeCount)
+      .filter(([_, count]) => count >= 3)
+      .map(([type]) => type);
+
     // Get current time context
     const now = new Date();
     const hour = now.getHours();
@@ -93,6 +102,11 @@ serve(async (req) => {
       const lastSessionDate = new Date(lastSession.started_at);
       const daysSinceLastSession = Math.floor((now.getTime() - lastSessionDate.getTime()) / (1000 * 60 * 60 * 24));
       contextParts.push(`Last session was ${daysSinceLastSession} day(s) ago on ${lastSession.venture} - ${lastSession.work_type}`);
+    }
+
+    // Detect if user might benefit from projects
+    if (projects.length === 0 && templates.length > 0 && repeatedWorkTypes.length > 0) {
+      contextParts.push(`PATTERN DETECTED: User has ${templates.length} templates but no projects. They've done ${repeatedWorkTypes.join(', ')} work types 3+ times. Consider suggesting they create a project to track multi-phase work.`);
     }
 
     if (templates.length > 0) {
@@ -120,7 +134,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       console.error('LOVABLE_API_KEY not configured');
-      return new Response(JSON.stringify({ suggestions: getDefaultSuggestions(projects, templates, timeOfDay) }), {
+      return new Response(JSON.stringify({ suggestions: getDefaultSuggestions(projects, templates, timeOfDay, projects.length === 0 && templates.length > 2) }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -130,15 +144,24 @@ serve(async (req) => {
 Generate 4-6 suggestions in JSON format. Each suggestion must have:
 - label: Short action text (2-5 words)
 - description: One sentence explanation
-- type: One of "project", "template", "session", "routine"
+- type: One of "project", "template", "session", "routine", "create_project"
 - data: Object with relevant IDs or config
 
 Priority order:
 1. Active projects that need continuation (type: "project", data: { projectId: "...", stageIndex: number })
-2. Time-appropriate routines (morning routine in morning, shutdown in evening)
-3. Recently used templates that match current context
-4. Ventures/categories not worked on recently
-5. General productivity actions
+2. If user has templates but no projects AND has worked on similar things 3+ times, suggest creating a project (type: "create_project")
+3. Time-appropriate routines (morning routine in morning, shutdown in evening)
+4. Recently used templates that match current context
+5. Ventures/categories not worked on recently
+6. General productivity actions
+
+NEW SUGGESTION TYPE - Use when user might benefit from projects:
+{
+  "label": "Create a project",
+  "description": "Track your [work type] work through stages for better progress",
+  "type": "create_project",
+  "data": { "suggestedVenture": "...", "suggestedWorkType": "..." }
+}
 
 Be creative with labels - don't just say "Continue X", use action verbs like "Shoot video for...", "Edit...", "Plan..."`;
 
@@ -146,6 +169,7 @@ Be creative with labels - don't just say "Continue X", use action verbs like "Sh
 ${contextParts.join('\n')}
 
 Available templates: ${templates.map(t => `${t.name} (${t.venture})`).join(', ') || 'None'}
+Active projects: ${projects.filter(p => p.status === 'active').length}
 
 Generate personalized suggestions based on this context.`;
 
@@ -177,7 +201,7 @@ Generate personalized suggestions based on this context.`;
                       properties: {
                         label: { type: 'string' },
                         description: { type: 'string' },
-                        type: { type: 'string', enum: ['project', 'template', 'session', 'routine'] },
+                        type: { type: 'string', enum: ['project', 'template', 'session', 'routine', 'create_project'] },
                         data: { type: 'object' },
                       },
                       required: ['label', 'description', 'type', 'data'],
@@ -195,7 +219,7 @@ Generate personalized suggestions based on this context.`;
 
     if (!aiResponse.ok) {
       console.error('AI API error:', aiResponse.status);
-      return new Response(JSON.stringify({ suggestions: getDefaultSuggestions(projects, templates, timeOfDay) }), {
+      return new Response(JSON.stringify({ suggestions: getDefaultSuggestions(projects, templates, timeOfDay, projects.length === 0 && templates.length > 2) }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -210,7 +234,7 @@ Generate personalized suggestions based on this context.`;
       });
     }
 
-    return new Response(JSON.stringify({ suggestions: getDefaultSuggestions(projects, templates, timeOfDay) }), {
+    return new Response(JSON.stringify({ suggestions: getDefaultSuggestions(projects, templates, timeOfDay, projects.length === 0 && templates.length > 2) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
@@ -223,7 +247,7 @@ Generate personalized suggestions based on this context.`;
   }
 });
 
-function getDefaultSuggestions(projects: any[], templates: any[], timeOfDay: string) {
+function getDefaultSuggestions(projects: any[], templates: any[], timeOfDay: string, suggestProject: boolean) {
   const suggestions: any[] = [];
 
   // Add active project suggestions first
@@ -237,6 +261,16 @@ function getDefaultSuggestions(projects: any[], templates: any[], timeOfDay: str
       });
     }
   });
+
+  // Suggest creating a project if user has templates but no projects
+  if (suggestProject) {
+    suggestions.push({
+      label: 'Create a project',
+      description: 'Track multi-phase work with stages for better progress',
+      type: 'create_project',
+      data: {},
+    });
+  }
 
   // Time-based routine
   if (timeOfDay === 'morning') {

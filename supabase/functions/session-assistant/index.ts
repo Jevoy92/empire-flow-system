@@ -23,6 +23,12 @@ interface SessionContext {
   completionCondition: string;
   tasks: Task[];
   elapsedMinutes: number;
+  // Project context (optional - only present if session is part of a project)
+  projectName?: string;
+  currentStageName?: string;
+  stageProgress?: string; // e.g., "2 of 4"
+  nextStageName?: string;
+  isProjectSession?: boolean;
 }
 
 const SYSTEM_PROMPT = `You are a focused productivity assistant helping during an active work session. Your job is to help the user stay productive by managing their task list and providing brief encouragement.
@@ -33,6 +39,7 @@ CURRENT SESSION CONTEXT:
 - Focus: {focus}
 - Completion Condition: {completionCondition}
 - Elapsed Time: {elapsedMinutes} minutes
+{projectContext}
 - Current Tasks:
 {taskList}
 
@@ -61,6 +68,7 @@ GUIDELINES:
 - Don't ask permission to take action - just do it
 - If user seems stuck or distracted, gently redirect to the next smallest step
 - You can suggest without taking action if appropriate
+{projectGuidelines}
 
 EXAMPLES:
 User: "add review the final cut"
@@ -101,6 +109,23 @@ serve(async (req) => {
         ).join("\n")
       : "  (no tasks yet)";
 
+    // Build project context if this is a project session
+    let projectContext = "";
+    let projectGuidelines = "";
+    
+    if (sessionContext.isProjectSession && sessionContext.projectName) {
+      projectContext = `
+- THIS IS A PROJECT SESSION
+- Project: ${sessionContext.projectName}
+- Current Stage: ${sessionContext.currentStageName || 'Unknown'}
+- Progress: Stage ${sessionContext.stageProgress || '?'}${sessionContext.nextStageName ? `\n- Next Stage: ${sessionContext.nextStageName}` : ' (final stage!)'}`;
+
+      projectGuidelines = `
+- This is part of a larger project - remind user of their progress when appropriate
+- When all tasks are done, mention they're ready to move to the next stage (or celebrate if it's the final stage!)
+- If user asks "what's next after this?", tell them about the next stage: ${sessionContext.nextStageName || 'This is the final stage!'}`;
+    }
+
     // Build system prompt with context
     const systemPrompt = SYSTEM_PROMPT
       .replace("{venture}", sessionContext.venture)
@@ -108,12 +133,16 @@ serve(async (req) => {
       .replace("{focus}", sessionContext.focus)
       .replace("{completionCondition}", sessionContext.completionCondition)
       .replace("{elapsedMinutes}", String(sessionContext.elapsedMinutes))
-      .replace("{taskList}", taskList);
+      .replace("{projectContext}", projectContext)
+      .replace("{taskList}", taskList)
+      .replace("{projectGuidelines}", projectGuidelines);
 
     console.log("Session assistant request:", {
       messageCount: messages.length,
       taskCount: sessionContext.tasks.length,
-      elapsedMinutes: sessionContext.elapsedMinutes
+      elapsedMinutes: sessionContext.elapsedMinutes,
+      isProjectSession: sessionContext.isProjectSession,
+      projectName: sessionContext.projectName,
     });
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
