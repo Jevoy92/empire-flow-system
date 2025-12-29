@@ -56,7 +56,14 @@ export function SessionAssistant({
   const [isExpanded, setIsExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceRecorder();
+  const { isRecording, isProcessing, partialText, startRecording, stopRecording } = useVoiceRecorder();
+
+  // Update input with partial text as user speaks
+  useEffect(() => {
+    if (isRecording && partialText) {
+      setInput(partialText);
+    }
+  }, [partialText, isRecording]);
 
   useEffect(() => {
     if (isExpanded) {
@@ -282,10 +289,10 @@ export function SessionAssistant({
           {isRecording && (
             <span className="flex items-center justify-center gap-2">
               <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-              Recording... tap mic to stop
+              {partialText ? 'Listening... tap mic to finish' : 'Listening... speak now'}
             </span>
           )}
-          {isProcessing && 'Processing audio...'}
+          {isProcessing && 'Finalizing...'}
         </div>
       )}
 
