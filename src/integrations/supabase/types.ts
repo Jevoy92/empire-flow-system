@@ -135,6 +135,7 @@ export type Database = {
           id: string
           theme: string
           updated_at: string
+          visible_template_tabs: Json
         }
         Insert: {
           created_at?: string
@@ -142,6 +143,7 @@ export type Database = {
           id: string
           theme?: string
           updated_at?: string
+          visible_template_tabs?: Json
         }
         Update: {
           created_at?: string
@@ -149,6 +151,7 @@ export type Database = {
           id?: string
           theme?: string
           updated_at?: string
+          visible_template_tabs?: Json
         }
         Relationships: [
           {

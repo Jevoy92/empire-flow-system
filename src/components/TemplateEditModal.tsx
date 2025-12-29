@@ -168,13 +168,18 @@ export function TemplateEditModal({ template, isOpen, onClose, onSave, isNew = f
               className="input-field"
             >
               <option value="">Select category...</option>
-              <optgroup label="Business">
-                {categories.filter(c => c.type === 'business').map(c => (
+              <optgroup label="Personal">
+                {categories.filter(c => c.type === 'personal').map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </optgroup>
-              <optgroup label="Personal">
-                {categories.filter(c => c.type === 'personal').map(c => (
+              <optgroup label="Projects">
+                {categories.filter(c => c.type === 'project').map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Business">
+                {categories.filter(c => c.type === 'business').map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </optgroup>

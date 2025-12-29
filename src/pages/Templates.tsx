@@ -1,10 +1,16 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Layout, Play, Trash2, Plus, Pencil } from 'lucide-react';
+import { Layout, Play, Trash2, Plus, Pencil, X, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TemplateEditModal } from '@/components/TemplateEditModal';
-import { categories, getCategoryById } from '@/data/ventures';
+import { categories, getCategoryById, CategoryType } from '@/data/ventures';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Template {
   id: string;
@@ -20,6 +26,15 @@ interface Template {
   user_id: string | null;
 }
 
+type TabType = 'personal' | 'projects' | 'business';
+
+const ALL_TABS: TabType[] = ['personal', 'projects', 'business'];
+const TAB_LABELS: Record<TabType, string> = {
+  personal: 'Personal',
+  projects: 'Projects',
+  business: 'Business',
+};
+
 export default function Templates() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,15 +42,38 @@ export default function Templates() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [visibleTabs, setVisibleTabs] = useState<TabType[]>(['personal', 'projects', 'business']);
+  const [activeTab, setActiveTab] = useState<TabType>('personal');
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get current user
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const init = async () => {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
       setUserId(user?.id ?? null);
-    });
 
-    loadTemplates();
+      // Load user settings for visible tabs
+      if (user?.id) {
+        const { data: settings } = await supabase
+          .from('user_settings')
+          .select('visible_template_tabs')
+          .eq('id', user.id)
+          .single();
+        
+        if (settings?.visible_template_tabs) {
+          const tabs = settings.visible_template_tabs as TabType[];
+          setVisibleTabs(tabs);
+          // Set active tab to first visible tab
+          if (tabs.length > 0 && !tabs.includes(activeTab)) {
+            setActiveTab(tabs[0]);
+          }
+        }
+      }
+
+      await loadTemplates();
+    };
+
+    init();
 
     // Set up realtime subscription
     const channel = supabase
@@ -74,6 +112,38 @@ export default function Templates() {
     }
     setLoading(false);
   };
+
+  const saveVisibleTabs = async (tabs: TabType[]) => {
+    if (!userId) return;
+    
+    await supabase
+      .from('user_settings')
+      .update({ visible_template_tabs: tabs })
+      .eq('id', userId);
+  };
+
+  const hideTab = async (tab: TabType) => {
+    const newVisibleTabs = visibleTabs.filter(t => t !== tab);
+    if (newVisibleTabs.length === 0) return; // Don't hide all tabs
+    
+    setVisibleTabs(newVisibleTabs);
+    await saveVisibleTabs(newVisibleTabs);
+    
+    // Switch to another tab if hiding the active one
+    if (activeTab === tab) {
+      setActiveTab(newVisibleTabs[0]);
+    }
+  };
+
+  const showTab = async (tab: TabType) => {
+    const newVisibleTabs = [...visibleTabs, tab].sort((a, b) => 
+      ALL_TABS.indexOf(a) - ALL_TABS.indexOf(b)
+    );
+    setVisibleTabs(newVisibleTabs);
+    await saveVisibleTabs(newVisibleTabs);
+  };
+
+  const hiddenTabs = ALL_TABS.filter(t => !visibleTabs.includes(t));
 
   const useTemplate = async (template: Template) => {
     await supabase
@@ -180,21 +250,32 @@ export default function Templates() {
   };
 
   // Split templates by type
-  const { personalTemplates, businessTemplates } = useMemo(() => {
+  const { personalTemplates, projectTemplates, businessTemplates } = useMemo(() => {
     const personal: Template[] = [];
+    const project: Template[] = [];
     const business: Template[] = [];
     
     templates.forEach(template => {
       const category = getCategoryById(template.venture);
       if (category?.type === 'personal') {
         personal.push(template);
+      } else if (category?.type === 'project') {
+        project.push(template);
       } else {
         business.push(template);
       }
     });
     
-    return { personalTemplates: personal, businessTemplates: business };
+    return { personalTemplates: personal, projectTemplates: project, businessTemplates: business };
   }, [templates]);
+
+  const getTemplatesForTab = (tab: TabType) => {
+    switch (tab) {
+      case 'personal': return personalTemplates;
+      case 'projects': return projectTemplates;
+      case 'business': return businessTemplates;
+    }
+  };
 
   // Group templates by category within each type
   const groupByCategory = (templateList: Template[]) => {
@@ -323,25 +404,55 @@ export default function Templates() {
             </button>
           </div>
         ) : (
-          <Tabs defaultValue="personal" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="personal" className="gap-2">
-                Personal
-                <span className="text-xs text-muted-foreground">({personalTemplates.length})</span>
-              </TabsTrigger>
-              <TabsTrigger value="business" className="gap-2">
-                Business
-                <span className="text-xs text-muted-foreground">({businessTemplates.length})</span>
-              </TabsTrigger>
-            </TabsList>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="w-full">
+            <div className="flex items-center gap-2 mb-4">
+              <TabsList className={`grid w-full ${
+                visibleTabs.length === 1 ? 'grid-cols-1' : 
+                visibleTabs.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+              }`}>
+                {visibleTabs.map(tab => (
+                  <TabsTrigger key={tab} value={tab} className="gap-1.5 group relative">
+                    {TAB_LABELS[tab]}
+                    <span className="text-xs text-muted-foreground">({getTemplatesForTab(tab).length})</span>
+                    {visibleTabs.length > 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hideTab(tab);
+                        }}
+                        className="absolute -top-1 -right-1 p-0.5 rounded-full bg-muted hover:bg-destructive/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title={`Hide ${TAB_LABELS[tab]} tab`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              
+              {hiddenTabs.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0">
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {hiddenTabs.map(tab => (
+                      <DropdownMenuItem key={tab} onClick={() => showTab(tab)}>
+                        Show {TAB_LABELS[tab]}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
             
-            <TabsContent value="personal" className="mt-0">
-              {renderTemplateList(personalTemplates)}
-            </TabsContent>
-            
-            <TabsContent value="business" className="mt-0">
-              {renderTemplateList(businessTemplates)}
-            </TabsContent>
+            {visibleTabs.map(tab => (
+              <TabsContent key={tab} value={tab} className="mt-0">
+                {renderTemplateList(getTemplatesForTab(tab))}
+              </TabsContent>
+            ))}
           </Tabs>
         )}
       </div>

@@ -1,6 +1,6 @@
 import { Venture } from '@/types/empire';
 
-export type CategoryType = 'business' | 'personal';
+export type CategoryType = 'business' | 'personal' | 'project';
 
 export interface Category {
   id: string;
@@ -58,13 +58,18 @@ export const ventures: Venture[] = [
   },
 ];
 
-// All categories (business ventures + personal life operations)
+// All categories (business ventures + personal life operations + projects)
 export const categories: Category[] = [
   // Business Ventures
   { id: 'palmer-house', name: 'Palmer House', tagline: 'Video Systems', type: 'business', color: 'primary' },
   { id: 'besettld', name: 'beSettld', tagline: 'Luxury Support', type: 'business', color: 'primary' },
   { id: 'yourboy', name: 'YourBoyJevoy', tagline: 'Artistic Expression', type: 'business', color: 'primary' },
   { id: 'strinzees', name: 'Strinzees', tagline: 'Modular Design', type: 'business', color: 'primary' },
+  // Projects
+  { id: 'side-project', name: 'Side Project', tagline: 'Independent creative or technical work', type: 'project', color: 'secondary' },
+  { id: 'learning', name: 'Learning', tagline: 'Skill development and courses', type: 'project', color: 'secondary' },
+  { id: 'creative', name: 'Creative', tagline: 'Art, writing, music, hobbies', type: 'project', color: 'secondary' },
+  { id: 'collaboration', name: 'Collaboration', tagline: 'Projects with others', type: 'project', color: 'secondary' },
   // Personal Life Operations
   { id: 'daily-maintenance', name: 'Daily Maintenance', tagline: 'Low effort, high anxiety if skipped', type: 'personal', color: 'accent' },
   { id: 'body-energy', name: 'Body & Energy', tagline: 'Reduce decision fatigue', type: 'personal', color: 'accent' },
@@ -80,6 +85,11 @@ export const workTypesByCategory: Record<string, string[]> = {
   'besettld': ['Client Communication', 'Strategic Planning', 'Admin & Files', 'Sales & Outreach'],
   'yourboy': ['Content Editing', 'Content Creation', 'Social Media', 'Learning & Research'],
   'strinzees': ['Content Creation', 'Strategic Planning', 'Learning & Research'],
+  // Projects
+  'side-project': ['Building', 'Planning', 'Research', 'Testing', 'Documentation'],
+  'learning': ['Course Work', 'Practice', 'Note Taking', 'Review', 'Application'],
+  'creative': ['Creating', 'Brainstorming', 'Editing', 'Refining', 'Sharing'],
+  'collaboration': ['Meeting', 'Coordination', 'Review', 'Feedback', 'Integration'],
   // Personal life operations
   'daily-maintenance': ['Bank Check', 'Morning Routine', 'Evening Shutdown', 'Daily Review'],
   'body-energy': ['Eating Session', 'Movement', 'Hydration Check'],
@@ -115,6 +125,26 @@ export const workTypes = [
   'Family Check-in',
   'Partner Time',
   'Personal Reflection',
+  // Project work types
+  'Building',
+  'Planning',
+  'Research',
+  'Testing',
+  'Documentation',
+  'Course Work',
+  'Practice',
+  'Note Taking',
+  'Review',
+  'Application',
+  'Creating',
+  'Brainstorming',
+  'Editing',
+  'Refining',
+  'Sharing',
+  'Meeting',
+  'Coordination',
+  'Feedback',
+  'Integration',
 ];
 
 export const defaultTasks: Record<string, string[]> = {
@@ -293,6 +323,119 @@ export const defaultTasks: Record<string, string[]> = {
     'Free write or think',
     'Note any insights',
     'Close gently',
+  ],
+  // Project work types
+  'Building': [
+    'Review current state',
+    'Identify next step',
+    'Work on implementation',
+    'Test progress',
+    'Document changes',
+  ],
+  'Planning': [
+    'Define objective',
+    'Break into steps',
+    'Estimate time needed',
+    'Identify dependencies',
+    'Create action list',
+  ],
+  'Research': [
+    'Define question',
+    'Find sources',
+    'Take notes',
+    'Synthesize findings',
+    'Document conclusions',
+  ],
+  'Testing': [
+    'Identify test cases',
+    'Run tests',
+    'Document results',
+    'Fix issues found',
+    'Verify fixes',
+  ],
+  'Documentation': [
+    'Outline structure',
+    'Write content',
+    'Add examples',
+    'Review clarity',
+    'Publish or save',
+  ],
+  'Course Work': [
+    'Review lesson objectives',
+    'Watch or read material',
+    'Take notes',
+    'Complete exercises',
+    'Review key points',
+  ],
+  'Practice': [
+    'Set practice goal',
+    'Warm up',
+    'Focus on skill',
+    'Push limits',
+    'Cool down and reflect',
+  ],
+  'Note Taking': [
+    'Prepare materials',
+    'Capture key points',
+    'Organize notes',
+    'Highlight important items',
+    'Save and tag',
+  ],
+  'Application': [
+    'Choose concept to apply',
+    'Create small project',
+    'Work through challenges',
+    'Review results',
+    'Note learnings',
+  ],
+  'Creating': [
+    'Set intention',
+    'Gather materials',
+    'Begin work',
+    'Enter flow state',
+    'Wrap up session',
+  ],
+  'Brainstorming': [
+    'Define problem or topic',
+    'Generate ideas freely',
+    'Don\'t judge yet',
+    'Cluster related ideas',
+    'Select top candidates',
+  ],
+  'Refining': [
+    'Review current version',
+    'Identify improvements',
+    'Make refinements',
+    'Compare versions',
+    'Decide next steps',
+  ],
+  'Sharing': [
+    'Prepare content',
+    'Choose platform',
+    'Write description',
+    'Post or send',
+    'Engage with feedback',
+  ],
+  'Coordination': [
+    'Review shared tasks',
+    'Update status',
+    'Communicate blockers',
+    'Align on next steps',
+    'Confirm deadlines',
+  ],
+  'Feedback': [
+    'Review work thoroughly',
+    'Note strengths',
+    'Identify improvements',
+    'Provide constructive notes',
+    'Discuss if needed',
+  ],
+  'Integration': [
+    'Review contributions',
+    'Test compatibility',
+    'Merge or combine',
+    'Resolve conflicts',
+    'Verify final result',
   ],
 };
 
