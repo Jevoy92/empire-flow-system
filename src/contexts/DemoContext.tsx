@@ -289,9 +289,9 @@ const initialDemoTemplates: DemoTemplate[] = [
   {
     id: "tpl-6",
     name: "Client Check-in",
-    venture: "business",
+    venture: "side-project",
     work_type: "Meetings",
-    default_focus: "Sync with client on project status",
+    default_focus: "Sync with collaborators on project status",
     default_completion_condition: "Action items captured",
     default_tasks: [
       { id: "t1", text: "Prepare agenda", completed: false },

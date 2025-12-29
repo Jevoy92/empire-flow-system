@@ -127,7 +127,6 @@ export function ProjectCreateModal({ isOpen, onClose, onCreated, templates }: Pr
     }
   };
 
-  const businessCategories = categories.filter(c => c.type === 'business');
   const projectCategories = categories.filter(c => c.type === 'project');
   const personalCategories = categories.filter(c => c.type === 'personal');
 
@@ -179,11 +178,10 @@ export function ProjectCreateModal({ isOpen, onClose, onCreated, templates }: Pr
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Business</div>
-                {businessCategories.map(c => (
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Projects</div>
+                {projectCategories.map(c => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
-                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Projects</div>
                 {projectCategories.map(c => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}

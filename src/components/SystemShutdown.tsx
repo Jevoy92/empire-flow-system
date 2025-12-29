@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Check, X, Save, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { CategoryType, getCategoryById } from '@/data/ventures';
+import { getCategoryById } from '@/data/ventures';
 
 interface SystemShutdownProps {
   onComplete: () => void;
@@ -20,9 +20,9 @@ interface SystemShutdownProps {
 }
 
 const shutdownChecklist = [
-  { id: 1, label: 'Files saved and named clearly' },
-  { id: 2, label: 'Workspace cleaned up' },
-  { id: 3, label: 'Status logged or updated' },
+  { id: 1, label: 'Progress saved' },
+  { id: 2, label: 'Workspace tidied' },
+  { id: 3, label: 'Next step captured' },
 ];
 
 const encouragingMessages = [
@@ -34,9 +34,8 @@ const encouragingMessages = [
   "You showed up. That matters.",
 ];
 
-// Generate sender role based on venture type and work type
+// Generate sender role based on venture and work type
 const generateSenderRole = (
-  ventureType: CategoryType | undefined,
   ventureName: string,
   workType: string
 ): string => {
@@ -51,19 +50,16 @@ const generateSenderRole = (
     'Learning & Research': 'Student',
     'Daily Review': 'Planner',
     'Personal Admin': 'Life Admin',
+    'Building': 'Builder',
+    'Planning': 'Planner',
+    'Research': 'Researcher',
   };
 
   const roleName = roleMap[workType] || workType.split(' ')[0];
-
-  // For business ventures, use the venture name
-  if (ventureType === 'business') {
-    return `${ventureName} ${roleName}`;
-  }
-
-  return `${roleName} You`;
+  return `${roleName} • ${ventureName}`;
 };
 
-type VentureMeta = { name: string; type?: CategoryType };
+type VentureMeta = { name: string; type?: 'personal' | 'project' };
 
 export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate, sessionStats, sessionContext }: SystemShutdownProps) {
   const [completedItems, setCompletedItems] = useState<number[]>([]);
@@ -111,7 +107,7 @@ export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate, sessi
         if (cancelled) return;
 
         if (uv?.name) {
-          setVentureMeta({ name: uv.name, type: uv.type as CategoryType });
+          setVentureMeta({ name: uv.name, type: uv.type as 'personal' | 'project' });
           return;
         }
 
@@ -162,9 +158,8 @@ export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate, sessi
       if (!user) return;
 
       const ventureName = ventureMeta?.name || getCategoryById(sessionContext.categoryId)?.name || sessionContext.categoryId;
-      const ventureType = ventureMeta?.type || getCategoryById(sessionContext.categoryId)?.type;
 
-      const senderRole = generateSenderRole(ventureType, ventureName, sessionContext.workType);
+      const senderRole = generateSenderRole(ventureName, sessionContext.workType);
 
       await supabase
         .from('future_notes')
@@ -198,7 +193,7 @@ export function SystemShutdown({ onComplete, onPlanNext, onSaveAsTemplate, sessi
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8" style={{ backgroundColor: 'hsl(var(--session-warm))' }}>
+    <div className="min-h-dvh flex items-center justify-center p-4 sm:p-8 overflow-y-auto" style={{ backgroundColor: 'hsl(var(--session-warm))' }}>
       <div className="w-full max-w-lg animate-fade-in">
         <div className="card-elevated p-8 relative overflow-hidden">
           {/* Confetti effect when complete */}

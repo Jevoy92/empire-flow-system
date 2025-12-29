@@ -69,13 +69,12 @@ export interface ProjectTemplate {
   updated_at: string;
 }
 
-type TabType = 'personal' | 'projects' | 'business';
+type TabType = 'personal' | 'projects';
 
-const ALL_TABS: TabType[] = ['personal', 'projects', 'business'];
+const ALL_TABS: TabType[] = ['personal', 'projects'];
 const TAB_LABELS: Record<TabType, string> = {
   personal: 'Personal',
   projects: 'Projects',
-  business: 'Business',
 };
 
 export default function Workflows() {
@@ -98,7 +97,7 @@ export default function Workflows() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
-  const [visibleTabs, setVisibleTabs] = useState<TabType[]>(['personal', 'projects', 'business']);
+  const [visibleTabs, setVisibleTabs] = useState<TabType[]>(['personal', 'projects']);
   const [activeTab, setActiveTab] = useState<TabType>('personal');
 
   useEffect(() => {
@@ -120,10 +119,20 @@ export default function Workflows() {
           .maybeSingle();
         
         if (settings?.visible_template_tabs) {
-          const tabs = settings.visible_template_tabs as TabType[];
+          // Filter out 'business' from loaded tabs and sanitize
+          const rawTabs = settings.visible_template_tabs as string[];
+          const cleanedTabs = rawTabs.filter(t => t === 'personal' || t === 'projects') as TabType[];
+          const tabs = cleanedTabs.length > 0 ? cleanedTabs : ['personal', 'projects'] as TabType[];
           setVisibleTabs(tabs);
           if (tabs.length > 0 && !tabs.includes(activeTab)) {
             setActiveTab(tabs[0]);
+          }
+          // Persist cleaned tabs if they changed
+          if (rawTabs.includes('business')) {
+            await supabase
+              .from('user_settings')
+              .update({ visible_template_tabs: tabs })
+              .eq('id', user.id);
           }
         }
 
@@ -358,34 +367,31 @@ export default function Workflows() {
     return map;
   }, [userVentures]);
 
-  const { personalTemplates, projectTemplatesFiltered, businessTemplates } = useMemo(() => {
+  const { personalTemplates, projectTemplatesFiltered } = useMemo(() => {
     const personal: Template[] = [];
     const project: Template[] = [];
-    const business: Template[] = [];
 
     templates.forEach(template => {
       const type = ventureTypeByName.get(template.venture) ?? getCategoryById(template.venture)?.type;
 
       if (type === 'personal') {
         personal.push(template);
-      } else if (type === 'project') {
+      } else if (type === 'project' || type === 'business') {
+        // Treat legacy business as project
         project.push(template);
-      } else if (type === 'business') {
-        business.push(template);
       } else {
-        // Unmatched: default to personal instead of business
+        // Unmatched: default to personal
         personal.push(template);
       }
     });
 
-    return { personalTemplates: personal, projectTemplatesFiltered: project, businessTemplates: business };
+    return { personalTemplates: personal, projectTemplatesFiltered: project };
   }, [templates, ventureTypeByName]);
 
   const getTemplatesForTab = (tab: TabType) => {
     switch (tab) {
       case 'personal': return personalTemplates;
       case 'projects': return projectTemplatesFiltered;
-      case 'business': return businessTemplates;
     }
   };
 

@@ -5,16 +5,15 @@ import { useAuth } from './useAuth';
 export interface UserVenture {
   id: string;
   name: string;
-  type: 'business' | 'personal' | 'project';
+  type: 'personal' | 'project';
   tagline: string | null;
   work_types: string[];
 }
 
-// Default categories when user has none
+// Default categories when user has none (only Personal and Projects, no Business)
 const DEFAULT_CATEGORIES: Omit<UserVenture, 'id'>[] = [
   { name: 'Personal', type: 'personal', tagline: 'Daily routines and self-care', work_types: ['Morning Routine', 'Evening Shutdown', 'Admin', 'Health'] },
-  { name: 'Projects', type: 'project', tagline: 'Independent work and learning', work_types: ['Building', 'Planning', 'Research', 'Learning'] },
-  { name: 'Work', type: 'business', tagline: 'Professional tasks', work_types: ['Deep Work', 'Communication', 'Planning', 'Admin'] },
+  { name: 'Projects', type: 'project', tagline: 'Independent work and learning', work_types: ['Building', 'Planning', 'Research', 'Learning', 'Deep Work', 'Communication'] },
 ];
 
 export function useUserVentures() {
@@ -42,10 +41,11 @@ export function useUserVentures() {
         if (fetchError) throw fetchError;
 
         if (data && data.length > 0) {
+          // Filter out any legacy 'business' type ventures, convert to 'project'
           setVentures(data.map(v => ({
             id: v.id,
             name: v.name,
-            type: v.type as 'business' | 'personal' | 'project',
+            type: (v.type === 'business' ? 'project' : v.type) as 'personal' | 'project',
             tagline: v.tagline,
             work_types: v.work_types || [],
           })));
@@ -72,10 +72,9 @@ export function useUserVentures() {
     fetchVentures();
   }, [user?.id]);
 
-  // Group ventures by type
+  // Group ventures by type (no business anymore)
   const personalVentures = ventures.filter(v => v.type === 'personal');
   const projectVentures = ventures.filter(v => v.type === 'project');
-  const businessVentures = ventures.filter(v => v.type === 'business');
 
   // Get work types for a specific venture
   const getWorkTypesForVenture = (ventureName: string): string[] => {
@@ -87,7 +86,6 @@ export function useUserVentures() {
     ventures,
     personalVentures,
     projectVentures,
-    businessVentures,
     loading,
     error,
     getWorkTypesForVenture,

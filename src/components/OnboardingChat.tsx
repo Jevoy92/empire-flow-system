@@ -12,7 +12,7 @@ import { z } from 'zod';
 // Schema validation for AI-generated ventures
 const VentureSchema = z.object({
   name: z.string().min(1).max(100),
-  type: z.enum(['business', 'personal', 'project']),
+  type: z.enum(['personal', 'project']),
   tagline: z.string().max(200).optional().default(''),
   work_types: z.array(z.string()).optional().default([]),
 });
@@ -43,7 +43,7 @@ const ProjectSchema = z.object({
 
 interface VentureData {
   name: string;
-  type: 'business' | 'personal' | 'project';
+  type: 'personal' | 'project';
   tagline: string;
   work_types: string[];
 }
@@ -583,7 +583,6 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium"
                     >
                       <span className={`w-2 h-2 rounded-full ${
-                        venture.type === 'business' ? 'bg-blue-500' :
                         venture.type === 'personal' ? 'bg-green-500' :
                         'bg-orange-500'
                       }`} />
