@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.smart-suggestions]
 verify_jwt = false
+
+[functions.generate-session-summary]
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = false

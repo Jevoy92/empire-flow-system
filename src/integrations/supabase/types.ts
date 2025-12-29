@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_conversations: {
+        Row: {
+          content: string
+          created_at: string | null
+          feature: string
+          id: string
+          metadata: Json | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          feature: string
+          id?: string
+          metadata?: Json | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          feature?: string
+          id?: string
+          metadata?: Json | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_user_insights: {
+        Row: {
+          id: string
+          patterns: Json | null
+          preferences: Json | null
+          recent_context: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          patterns?: Json | null
+          preferences?: Json | null
+          recent_context?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          patterns?: Json | null
+          preferences?: Json | null
+          recent_context?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       future_notes: {
         Row: {
           category_id: string
