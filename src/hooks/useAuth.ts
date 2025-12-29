@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface Profile {
   id: string;
@@ -26,6 +27,36 @@ export function useAuth() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+
+  // Refresh session - can be called manually or on window focus
+  const refreshSession = useCallback(async () => {
+    try {
+      const { data: { session: refreshedSession }, error } = await supabase.auth.refreshSession();
+      if (error) {
+        // Session expired or invalid - user needs to sign in again
+        if (error.message.includes('refresh_token') || error.message.includes('expired')) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setSettings(null);
+          toast({
+            title: "Session expired",
+            description: "Please sign in again to continue.",
+            variant: "destructive",
+          });
+        }
+        return null;
+      }
+      if (refreshedSession) {
+        setSession(refreshedSession);
+        setUser(refreshedSession.user);
+      }
+      return refreshedSession;
+    } catch (err) {
+      console.error('Failed to refresh session:', err);
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -64,8 +95,19 @@ export function useAuth() {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, [initialized]);
+    // Refresh session when window regains focus (prevents "locking out")
+    const handleFocus = () => {
+      if (session) {
+        refreshSession();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [initialized, refreshSession, session]);
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -172,6 +214,7 @@ export function useAuth() {
     updateProfile,
     updateSettings,
     completeOnboarding,
+    refreshSession,
     refetchProfile: () => user && fetchProfile(user.id),
     refetchSettings: () => user && fetchSettings(user.id),
   };
