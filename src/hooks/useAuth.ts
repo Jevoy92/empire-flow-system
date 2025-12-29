@@ -25,40 +25,47 @@ export function useAuth() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
         
         // Defer profile fetch to avoid deadlock
-        if (session?.user) {
+        if (currentSession?.user) {
           setTimeout(() => {
-            fetchProfile(session.user.id);
-            fetchSettings(session.user.id);
+            fetchProfile(currentSession.user.id);
+            fetchSettings(currentSession.user.id);
           }, 0);
         } else {
           setProfile(null);
           setSettings(null);
         }
+        
+        // After initial load, auth state changes should immediately update loading
+        if (initialized) {
+          setLoading(false);
+        }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-        fetchSettings(session.user.id);
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      if (currentSession?.user) {
+        fetchProfile(currentSession.user.id);
+        fetchSettings(currentSession.user.id);
       }
+      setInitialized(true);
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [initialized]);
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
