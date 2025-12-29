@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Plus, GripVertical, Trash2, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { categories, workTypesByCategory } from '@/data/ventures';
-import { ProjectTemplate, ProjectStage } from '@/pages/Projects';
+import { ProjectTemplate, ProjectStage } from '@/pages/Workflows';
 import {
   Dialog,
   DialogContent,
