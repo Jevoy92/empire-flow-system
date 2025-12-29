@@ -3,7 +3,7 @@ export interface Achievement {
   name: string;
   description: string;
   icon: string;
-  category: 'sessions' | 'tasks' | 'exploration' | 'time' | 'templates' | 'notes' | 'streaks';
+  category: 'sessions' | 'tasks' | 'exploration' | 'time' | 'templates' | 'notes' | 'streaks' | 'projects';
   threshold: number;
   stat: keyof UserStats;
 }
@@ -20,6 +20,7 @@ export interface UserStats {
   longest_streak: number;
   last_session_date: string | null;
   achievements_unlocked: string[];
+  projects_completed: number;
 }
 
 export const achievements: Achievement[] = [
@@ -225,6 +226,35 @@ export const achievements: Achievement[] = [
     threshold: 30,
     stat: 'longest_streak',
   },
+
+  // Projects
+  {
+    id: 'project_pioneer',
+    name: 'Project Pioneer',
+    description: 'Complete your first multi-stage project',
+    icon: '🚀',
+    category: 'projects',
+    threshold: 1,
+    stat: 'projects_completed',
+  },
+  {
+    id: 'multi_tasker',
+    name: 'Multi-tasker',
+    description: 'Complete 5 projects',
+    icon: '📊',
+    category: 'projects',
+    threshold: 5,
+    stat: 'projects_completed',
+  },
+  {
+    id: 'project_master',
+    name: 'Project Master',
+    description: 'Complete 25 projects',
+    icon: '🏗️',
+    category: 'projects',
+    threshold: 25,
+    stat: 'projects_completed',
+  },
 ];
 
 export const categoryLabels: Record<Achievement['category'], string> = {
@@ -235,6 +265,7 @@ export const categoryLabels: Record<Achievement['category'], string> = {
   templates: 'Templates',
   notes: 'Notes to Future Me',
   streaks: 'Streaks',
+  projects: 'Projects',
 };
 
 export function getStatValue(stats: UserStats, stat: keyof UserStats): number {

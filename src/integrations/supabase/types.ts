@@ -309,6 +309,7 @@ export type Database = {
           longest_streak: number
           notes_read: number
           notes_sent: number
+          projects_completed: number
           templates_created: number
           total_minutes_worked: number
           total_sessions_completed: number
@@ -325,6 +326,7 @@ export type Database = {
           longest_streak?: number
           notes_read?: number
           notes_sent?: number
+          projects_completed?: number
           templates_created?: number
           total_minutes_worked?: number
           total_sessions_completed?: number
@@ -341,6 +343,7 @@ export type Database = {
           longest_streak?: number
           notes_read?: number
           notes_sent?: number
+          projects_completed?: number
           templates_created?: number
           total_minutes_worked?: number
           total_sessions_completed?: number

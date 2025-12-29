@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ArrowRight, Play, Mic, Send, Square, MessageSquare, X, Check } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { ArrowRight, Play, Mic, Send, Square, MessageSquare, Check, Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,6 +28,19 @@ interface FutureNote {
   is_read: boolean;
 }
 
+interface SmartSuggestion {
+  label: string;
+  description: string;
+  type: 'project' | 'template' | 'session' | 'routine';
+  data: {
+    projectId?: string;
+    stageIndex?: number;
+    templateId?: string;
+    venture?: string;
+    workType?: string;
+  };
+}
+
 interface HomeScreenProps {
   onStartSession: () => void;
 }
@@ -49,32 +62,19 @@ const getGreeting = (): string => {
   return 'Good evening';
 };
 
-const getContextLine = (): string => {
-  const lines = [
-    "What's on your mind?",
-    "What needs your focus today?",
-    "How can I help?",
-  ];
-  return lines[Math.floor(Math.random() * lines.length)];
-};
-
 const getVentureColor = (venture: string): string => {
   return ventureColors[venture] || 'bg-primary';
 };
 
-const quickActions = [
-  { label: 'Start a work session', action: 'session' },
-  { label: "What did I do yesterday?", action: 'history' },
-];
-
 export function HomeScreen({ onStartSession }: HomeScreenProps) {
   const [recentTemplates, setRecentTemplates] = useState<Template[]>([]);
   const [futureNotes, setFutureNotes] = useState<FutureNote[]>([]);
+  const [suggestions, setSuggestions] = useState<SmartSuggestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
   const [greeting] = useState(getGreeting());
-  const [contextLine] = useState(getContextLine());
   const [input, setInput] = useState('');
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { isRecording, isProcessing, partialText, startRecording, stopRecording, error } = useVoiceRecorder();
 
   // Update input with partial text as user speaks
@@ -84,10 +84,40 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     }
   }, [partialText, isRecording]);
 
+  const loadSmartSuggestions = useCallback(async () => {
+    if (!user) return;
+    
+    setSuggestionsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('smart-suggestions');
+      
+      if (error) {
+        console.error('Error fetching suggestions:', error);
+        // Fallback to basic suggestions
+        setSuggestions([
+          { label: 'Start a work session', description: 'Begin a focused work session', type: 'session', data: {} },
+          { label: "What did I do yesterday?", description: 'Review your history', type: 'session', data: {} },
+        ]);
+      } else if (data?.suggestions) {
+        setSuggestions(data.suggestions);
+      }
+    } catch (err) {
+      console.error('Failed to load suggestions:', err);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     loadRecentTemplates();
     loadFutureNotes();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadSmartSuggestions();
+    }
+  }, [user, loadSmartSuggestions]);
 
   const loadRecentTemplates = async () => {
     const { data } = await supabase
@@ -154,6 +184,76 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     });
   };
 
+  const handleSuggestionClick = async (suggestion: SmartSuggestion) => {
+    switch (suggestion.type) {
+      case 'project':
+        if (suggestion.data.projectId) {
+          // Navigate to session with project context
+          const { data: project } = await supabase
+            .from('projects')
+            .select('*')
+            .eq('id', suggestion.data.projectId)
+            .single();
+          
+          if (project) {
+            const stages = Array.isArray(project.stages) ? project.stages : [];
+            const currentStage = stages[suggestion.data.stageIndex || project.current_stage] as any;
+            
+            navigate('/session', {
+              state: {
+                venture: project.venture,
+                workType: currentStage?.workType || 'Deep Work',
+                focus: currentStage?.name || project.name,
+                completionCondition: currentStage?.completionCondition || 'Stage complete',
+                projectId: project.id,
+                stageIndex: suggestion.data.stageIndex ?? project.current_stage,
+              }
+            });
+          }
+        }
+        break;
+      
+      case 'template':
+        if (suggestion.data.templateId) {
+          const template = recentTemplates.find(t => t.id === suggestion.data.templateId);
+          if (template) {
+            await useTemplate(template);
+          } else {
+            // Fetch template if not in recent
+            const { data: templateData } = await supabase
+              .from('templates')
+              .select('*')
+              .eq('id', suggestion.data.templateId)
+              .single();
+            if (templateData) {
+              await useTemplate(templateData);
+            }
+          }
+        }
+        break;
+      
+      case 'routine':
+        navigate('/session', {
+          state: {
+            venture: suggestion.data.venture || 'daily-maintenance',
+            workType: suggestion.data.workType || 'Morning Routine',
+            focus: suggestion.label,
+            completionCondition: 'Routine complete',
+          }
+        });
+        break;
+      
+      case 'session':
+      default:
+        if (suggestion.label.toLowerCase().includes('yesterday') || suggestion.label.toLowerCase().includes('history')) {
+          navigate('/history');
+        } else {
+          onStartSession();
+        }
+        break;
+    }
+  };
+
   const handleMicPress = async () => {
     if (isRecording) {
       const text = await stopRecording();
@@ -162,14 +262,6 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
       }
     } else {
       await startRecording();
-    }
-  };
-
-  const handleQuickAction = (action: string) => {
-    if (action === 'session') {
-      onStartSession();
-    } else if (action === 'history') {
-      navigate('/history');
     }
   };
 
@@ -244,7 +336,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
             {greeting}{firstName ? `, ${firstName}` : ''}.
           </h1>
           <p className="text-muted-foreground">
-            {contextLine}
+            What's on your mind?
           </p>
         </div>
 
@@ -329,17 +421,28 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
             )}
           </div>
 
-          {/* Quick Action Chips */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            {quickActions.map((action) => (
-              <button
-                key={action.label}
-                onClick={() => handleQuickAction(action.action)}
-                className="px-4 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-              >
-                {action.label}
-              </button>
-            ))}
+          {/* Smart AI-Powered Suggestions */}
+          <div className="mt-4">
+            {suggestionsLoading ? (
+              <div className="flex items-center justify-center gap-2 py-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Loading suggestions...</span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {suggestions.slice(0, 4).map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="group px-3 py-2 rounded-lg bg-secondary/50 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-1.5"
+                    title={suggestion.description}
+                  >
+                    {suggestion.type === 'project' && <Sparkles className="w-3 h-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />}
+                    {suggestion.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

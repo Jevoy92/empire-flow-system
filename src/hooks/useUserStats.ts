@@ -15,6 +15,7 @@ const defaultStats: UserStats = {
   longest_streak: 0,
   last_session_date: null,
   achievements_unlocked: [],
+  projects_completed: 0,
 };
 
 export function useUserStats() {
@@ -52,6 +53,7 @@ export function useUserStats() {
           longest_streak: data.longest_streak,
           last_session_date: data.last_session_date,
           achievements_unlocked: data.achievements_unlocked || [],
+          projects_completed: data.projects_completed ?? 0,
         });
       } else {
         // Create stats record if it doesn't exist
@@ -136,6 +138,7 @@ export function useUserStats() {
             longest_streak: data.longest_streak,
             last_session_date: data.last_session_date,
             achievements_unlocked: data.achievements_unlocked || [],
+            projects_completed: data.projects_completed ?? 0,
           });
         }
       )
