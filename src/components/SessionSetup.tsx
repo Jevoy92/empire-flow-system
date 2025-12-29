@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { EnergyLevel, VentureId } from '@/types/empire';
-import { ventures, workTypes } from '@/data/ventures';
+import { categories, workTypesByCategory, getCategoryById } from '@/data/ventures';
 import { Check, ChevronRight } from 'lucide-react';
 
 interface SessionSetupProps {
@@ -23,17 +23,20 @@ const setupChecklist = [
 ];
 
 export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
-  const [step, setStep] = useState<'definition' | 'venture' | 'worktype' | 'setup'>('definition');
+  const [step, setStep] = useState<'definition' | 'category' | 'worktype' | 'setup'>('definition');
   const [focus, setFocus] = useState('');
   const [completionCondition, setCompletionCondition] = useState('');
-  const [venture, setVenture] = useState<VentureId | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [workType, setWorkType] = useState<string>('');
   const [completedItems, setCompletedItems] = useState<number[]>([]);
 
   const canContinueDefinition = focus.trim() !== '' && completionCondition.trim() !== '';
-  const canContinueVenture = venture !== null;
+  const canContinueCategory = selectedCategory !== null;
   const canContinueWorktype = workType !== '';
   const allSetupComplete = completedItems.length === setupChecklist.length;
+
+  // Get available work types for selected category
+  const availableWorkTypes = selectedCategory ? (workTypesByCategory[selectedCategory] || []) : [];
 
   const toggleItem = (id: number) => {
     setCompletedItems(prev =>
@@ -42,10 +45,10 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
   };
 
   const handleStart = () => {
-    if (venture && workType) {
+    if (selectedCategory && workType) {
       onLaunch({
-        energy: 'high', // Simplified - removed energy selection per design
-        venture,
+        energy: 'high',
+        venture: selectedCategory as VentureId,
         workType,
         focus,
         completionCondition,
@@ -56,11 +59,18 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
   const getStepNumber = () => {
     switch (step) {
       case 'definition': return 1;
-      case 'venture': return 2;
+      case 'category': return 2;
       case 'worktype': return 3;
       case 'setup': return 4;
     }
   };
+
+  // Group categories by type
+  const personalCategories = categories.filter(c => c.type === 'personal');
+  const projectCategories = categories.filter(c => c.type === 'project');
+  const businessCategories = categories.filter(c => c.type === 'business');
+
+  const selectedCategoryData = selectedCategory ? getCategoryById(selectedCategory) : null;
 
   return (
     <div className="w-full max-w-lg animate-fade-in">
@@ -115,7 +125,7 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
                 Cancel
               </button>
               <button
-                onClick={() => setStep('venture')}
+                onClick={() => setStep('category')}
                 disabled={!canContinueDefinition}
                 className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
               >
@@ -126,28 +136,87 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
           </div>
         )}
 
-        {/* Step 2: Venture Selection */}
-        {step === 'venture' && (
+        {/* Step 2: Category Selection */}
+        {step === 'category' && (
           <div className="animate-slide-up">
-            <h2 className="text-xl font-semibold mb-2">Select Venture</h2>
-            <p className="text-muted-foreground mb-8">Which venture is this for?</p>
+            <h2 className="text-xl font-semibold mb-2">Select Category</h2>
+            <p className="text-muted-foreground mb-6">What area is this for?</p>
             
-            <div className="space-y-3">
-              {ventures.map((v) => (
-                <button
-                  key={v.id}
-                  onClick={() => setVenture(v.id)}
-                  className={`checklist-item ${venture === v.id ? 'completed border-primary' : ''}`}
-                >
-                  <div className={`check-circle ${venture === v.id ? 'checked' : ''}`}>
-                    {venture === v.id && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
-                  </div>
-                  <div>
-                    <div className="font-medium">{v.name}</div>
-                    <div className="text-sm text-muted-foreground">{v.tagline}</div>
-                  </div>
-                </button>
-              ))}
+            <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2">
+              {/* Personal */}
+              <div>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Personal</h3>
+                <div className="space-y-2">
+                  {personalCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        setSelectedCategory(cat.id);
+                        setWorkType(''); // Reset work type when category changes
+                      }}
+                      className={`checklist-item py-3 ${selectedCategory === cat.id ? 'completed border-primary' : ''}`}
+                    >
+                      <div className={`check-circle ${selectedCategory === cat.id ? 'checked' : ''}`}>
+                        {selectedCategory === cat.id && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{cat.name}</div>
+                        <div className="text-xs text-muted-foreground">{cat.tagline}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Projects */}
+              <div>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Projects</h3>
+                <div className="space-y-2">
+                  {projectCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        setSelectedCategory(cat.id);
+                        setWorkType('');
+                      }}
+                      className={`checklist-item py-3 ${selectedCategory === cat.id ? 'completed border-primary' : ''}`}
+                    >
+                      <div className={`check-circle ${selectedCategory === cat.id ? 'checked' : ''}`}>
+                        {selectedCategory === cat.id && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{cat.name}</div>
+                        <div className="text-xs text-muted-foreground">{cat.tagline}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Business */}
+              <div>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Business</h3>
+                <div className="space-y-2">
+                  {businessCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        setSelectedCategory(cat.id);
+                        setWorkType('');
+                      }}
+                      className={`checklist-item py-3 ${selectedCategory === cat.id ? 'completed border-primary' : ''}`}
+                    >
+                      <div className={`check-circle ${selectedCategory === cat.id ? 'checked' : ''}`}>
+                        {selectedCategory === cat.id && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{cat.name}</div>
+                        <div className="text-xs text-muted-foreground">{cat.tagline}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-between mt-10">
@@ -156,7 +225,7 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
               </button>
               <button
                 onClick={() => setStep('worktype')}
-                disabled={!canContinueVenture}
+                disabled={!canContinueCategory}
                 className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 Continue
@@ -170,10 +239,13 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
         {step === 'worktype' && (
           <div className="animate-slide-up">
             <h2 className="text-xl font-semibold mb-2">Work Type</h2>
-            <p className="text-muted-foreground mb-8">What kind of work is this?</p>
+            <p className="text-muted-foreground mb-2">What kind of work is this?</p>
+            {selectedCategoryData && (
+              <p className="text-xs text-primary mb-6">{selectedCategoryData.name}</p>
+            )}
             
             <div className="grid grid-cols-2 gap-3">
-              {workTypes.map((type) => (
+              {availableWorkTypes.map((type) => (
                 <button
                   key={type}
                   onClick={() => setWorkType(type)}
@@ -189,7 +261,7 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
             </div>
 
             <div className="flex justify-between mt-10">
-              <button onClick={() => setStep('venture')} className="btn-ghost">
+              <button onClick={() => setStep('category')} className="btn-ghost">
                 Back
               </button>
               <button
