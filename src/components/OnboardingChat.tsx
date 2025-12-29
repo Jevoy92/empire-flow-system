@@ -426,9 +426,85 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
     }
   };
 
+  // Save all pending templates at once
+  const handleSaveAllTemplates = async () => {
+    const pendingTemplates: { template: TemplateData; messageId: string; index: number }[] = [];
+    
+    messages.forEach(msg => {
+      msg.templates?.forEach((template, i) => {
+        const templateKey = `${msg.id}-template-${i}`;
+        if (!savedTemplates.has(templateKey)) {
+          pendingTemplates.push({ template, messageId: msg.id, index: i });
+        }
+      });
+    });
+
+    if (pendingTemplates.length === 0) return;
+
+    let savedCount = 0;
+    for (const { template, messageId, index } of pendingTemplates) {
+      try {
+        const { error } = await supabase.from('templates').insert({
+          user_id: userId,
+          name: template.name,
+          venture: template.venture,
+          work_type: template.work_type,
+          default_focus: template.default_focus,
+          default_tasks: template.default_tasks,
+          use_ai_tasks: false,
+        });
+
+        if (!error) {
+          const templateKey = `${messageId}-template-${index}`;
+          setSavedTemplates(prev => new Set([...prev, templateKey]));
+          setLastApprovedTemplate(template);
+          savedCount++;
+        }
+      } catch (e) {
+        console.error('Failed to save template:', e);
+      }
+    }
+
+    if (savedCount > 0) {
+      toast({
+        title: `${savedCount} templates saved!`,
+        description: 'All templates have been added to your workspace.',
+      });
+    }
+  };
+
+  // Request more templates from AI
+  const handleGenerateMore = async () => {
+    const prompt = "Generate more templates based on what I've told you. Give me additional focus templates for other activities or variations of the ones you already created.";
+    setInput(prompt);
+    // Trigger send after a short delay to allow state update
+    setTimeout(() => {
+      handleSend();
+    }, 100);
+  };
+
+  // Count pending items
+  const getPendingCounts = () => {
+    let pendingTemplates = 0;
+    let pendingProjects = 0;
+    
+    messages.forEach(msg => {
+      msg.templates?.forEach((_, i) => {
+        if (!savedTemplates.has(`${msg.id}-template-${i}`)) pendingTemplates++;
+      });
+      msg.projects?.forEach((_, i) => {
+        if (!savedProjects.has(`${msg.id}-project-${i}`)) pendingProjects++;
+      });
+    });
+    
+    return { pendingTemplates, pendingProjects };
+  };
+
   const handleFinish = () => {
     onComplete(allTemplates, lastApprovedTemplate);
   };
+
+  const { pendingTemplates, pendingProjects } = getPendingCounts();
 
   const hasApprovedItems = savedTemplates.size > 0 || savedProjects.size > 0;
 
@@ -557,19 +633,46 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
 
       {/* Input */}
       <div className="p-4 border-t border-border bg-background">
-        {hasApprovedItems && (
-          <div className="mb-3 text-center">
-            <Button onClick={handleFinish} className="gap-2">
-              <Sparkles className="w-4 h-4" />
-              Start a Session →
-            </Button>
+        {/* Status bar and action buttons */}
+        {hasGenerated && (
+          <div className="mb-3 space-y-2">
+            {/* Status counts */}
+            <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+              <span>{savedTemplates.size} saved</span>
+              {pendingTemplates > 0 && <span>{pendingTemplates} pending</span>}
+              {savedProjects.size > 0 && <span>{savedProjects.size} workflows</span>}
+            </div>
+            
+            {/* Action buttons */}
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              {pendingTemplates > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleSaveAllTemplates}
+                  disabled={isLoading}
+                >
+                  Save All ({pendingTemplates})
+                </Button>
+              )}
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleGenerateMore}
+                disabled={isLoading}
+              >
+                Generate More
+              </Button>
+              
+              {hasApprovedItems && (
+                <Button size="sm" onClick={handleFinish} className="gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Start Session
+                </Button>
+              )}
+            </div>
           </div>
-        )}
-
-        {hasGenerated && !hasApprovedItems && (
-          <p className="text-xs text-muted-foreground text-center mb-3">
-            Tap the templates above to save them, then start a session
-          </p>
         )}
 
         <div className="flex gap-2">
