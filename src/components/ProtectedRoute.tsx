@@ -9,6 +9,13 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
+  
+  // Allow access in demo mode
+  const isDemo = location.search.includes('demo=1');
+  
+  if (isDemo) {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (
