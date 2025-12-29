@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { HomeScreen } from '@/components/HomeScreen';
 import { SessionSetup } from '@/components/SessionSetup';
 import { LandingPage } from '@/components/LandingPage';
+import { DemoBanner } from '@/components/DemoBanner';
+import { DemoProvider } from '@/contexts/DemoContext';
 import { useAuth } from '@/hooks/useAuth';
 import { VentureId, EnergyLevel } from '@/types/empire';
 import { Loader2 } from 'lucide-react';
@@ -17,10 +19,16 @@ interface SessionConfig {
   completionCondition: string;
 }
 
+function useQueryFlag(key: string) {
+  const { search } = useLocation();
+  return useMemo(() => new URLSearchParams(search).get(key) === "1", [search, key]);
+}
+
 const Index = () => {
   const [view, setView] = useState<AppView>('home');
   const navigate = useNavigate();
   const { isAuthenticated, loading } = useAuth();
+  const isDemo = useQueryFlag("demo");
 
   // Check for prefill data from templates or history
   useEffect(() => {
@@ -42,6 +50,10 @@ const Index = () => {
     setView('home');
   };
 
+  const handleTryDemo = () => {
+    navigate("/?demo=1");
+  };
+
   // Show loading state while checking auth
   if (loading) {
     return (
@@ -51,25 +63,45 @@ const Index = () => {
     );
   }
 
-  // Show landing page for unauthenticated users
-  if (!isAuthenticated) {
-    return <LandingPage />;
+  // Authenticated user: show app
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        {view === 'home' && (
+          <HomeScreen onStartSession={() => setView('setup')} />
+        )}
+
+        {view === 'setup' && (
+          <div className="min-h-screen flex items-center justify-center p-8 pb-24">
+            <SessionSetup onLaunch={handleLaunch} onCancel={handleCancel} />
+          </div>
+        )}
+      </div>
+    );
   }
 
-  // Show app for authenticated users
-  return (
-    <div className="min-h-screen bg-background">
-      {view === 'home' && (
-        <HomeScreen onStartSession={() => setView('setup')} />
-      )}
+  // Demo mode: wrap app with demo provider
+  if (isDemo) {
+    return (
+      <DemoProvider>
+        <div className="min-h-screen bg-background pt-10">
+          <DemoBanner />
+          {view === 'home' && (
+            <HomeScreen onStartSession={() => setView('setup')} />
+          )}
 
-      {view === 'setup' && (
-        <div className="min-h-screen flex items-center justify-center p-8 pb-24">
-          <SessionSetup onLaunch={handleLaunch} onCancel={handleCancel} />
+          {view === 'setup' && (
+            <div className="min-h-screen flex items-center justify-center p-8 pb-24">
+              <SessionSetup onLaunch={handleLaunch} onCancel={handleCancel} />
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
+      </DemoProvider>
+    );
+  }
+
+  // Unauthenticated: show landing page
+  return <LandingPage onTryDemo={handleTryDemo} />;
 };
 
 export default Index;

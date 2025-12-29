@@ -9,10 +9,13 @@ export function Navigation() {
   const [isAIOpen, setIsAIOpen] = useState(false);
   const { isActive, isMinimized } = useSession();
 
-  // Hide navigation during active full-screen session, onboarding, or auth
-  // Show navigation if session is minimized
+  // Hide navigation during active full-screen session, onboarding, auth, or landing page (unauthenticated home)
   const isFullScreenSession = location.pathname === '/session' && isActive && !isMinimized;
-  if (isFullScreenSession || location.pathname === '/onboarding' || location.pathname === '/auth') {
+  const isLandingOrAuth = location.pathname === '/auth' || location.pathname === '/onboarding';
+  const isDemo = location.search.includes('demo=1');
+  
+  // Hide nav on landing page (when on "/" without demo mode - actual landing is shown)
+  if (isFullScreenSession || isLandingOrAuth) {
     return null;
   }
 
