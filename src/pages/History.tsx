@@ -49,6 +49,26 @@ export default function History() {
 
   useEffect(() => {
     loadSessions();
+
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('sessions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sessions'
+        },
+        () => {
+          loadSessions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadSessions = async () => {

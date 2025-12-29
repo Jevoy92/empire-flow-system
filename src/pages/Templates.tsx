@@ -17,6 +17,7 @@ interface Template {
   use_ai_tasks: boolean;
   created_at: string;
   last_used_at: string | null;
+  user_id: string | null;
 }
 
 export default function Templates() {
@@ -25,10 +26,36 @@ export default function Templates() {
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Get current user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUserId(user?.id ?? null);
+    });
+
     loadTemplates();
+
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('templates-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'templates'
+        },
+        () => {
+          loadTemplates();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadTemplates = async () => {
@@ -98,6 +125,10 @@ export default function Templates() {
 
   const handleSaveTemplate = async (templateData: Partial<Template>) => {
     if (isCreating) {
+      if (!userId) {
+        console.error('No user logged in');
+        return;
+      }
       const { data, error } = await supabase
         .from('templates')
         .insert({
@@ -108,6 +139,7 @@ export default function Templates() {
           default_completion_condition: templateData.default_completion_condition,
           use_ai_tasks: templateData.use_ai_tasks,
           default_tasks: templateData.default_tasks || [],
+          user_id: userId,
         })
         .select()
         .single();
