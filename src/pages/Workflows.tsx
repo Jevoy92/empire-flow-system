@@ -370,8 +370,11 @@ export default function Workflows() {
         personal.push(template);
       } else if (type === 'project') {
         project.push(template);
-      } else {
+      } else if (type === 'business') {
         business.push(template);
+      } else {
+        // Unmatched: default to personal instead of business
+        personal.push(template);
       }
     });
 
@@ -496,7 +499,7 @@ export default function Workflows() {
 
   if (loading) {
     return (
-      <div className="min-h-screen pb-20 p-6">
+      <div className="min-h-dvh pb-24 p-6 animate-fade-in overflow-y-auto">
         <div className="max-w-lg mx-auto">
           <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
             <Layers className="w-6 h-6" />

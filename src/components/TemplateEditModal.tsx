@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, GripVertical } from 'lucide-react';
-import { categories, workTypesByCategory, defaultTasks, getCategoryById } from '@/data/ventures';
+import { Plus, Trash2, GripVertical, Loader2 } from 'lucide-react';
+import { useUserVentures } from '@/hooks/useUserVentures';
+import { defaultTasks } from '@/data/ventures';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 interface Task {
   id: string;
@@ -34,6 +36,8 @@ interface TemplateEditModalProps {
 }
 
 export function TemplateEditModal({ template, isOpen, onClose, onSave, isNew = false }: TemplateEditModalProps) {
+  const { ventures, personalVentures, projectVentures, businessVentures, getWorkTypesForVenture, loading: venturesLoading } = useUserVentures();
+  
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [workType, setWorkType] = useState('');
@@ -42,9 +46,13 @@ export function TemplateEditModal({ template, isOpen, onClose, onSave, isNew = f
   const [useAiTasks, setUseAiTasks] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskText, setNewTaskText] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Get available work types for selected category
-  const availableWorkTypes = category ? (workTypesByCategory[category] || []) : [];
+  // Get available work types for selected category (venture name)
+  const availableWorkTypes = category ? getWorkTypesForVenture(category) : [];
+  
+  // Get the selected venture for tagline display
+  const selectedVenture = ventures.find(v => v.name === category);
 
   // Reset form when template changes
   useEffect(() => {
@@ -87,20 +95,31 @@ export function TemplateEditModal({ template, isOpen, onClose, onSave, isNew = f
     }
   }, [workType, useAiTasks]);
 
-  const handleSave = () => {
-    if (!name.trim() || !category || !workType) return;
+  const handleSave = async () => {
+    if (!name.trim() || !category || !workType) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
     
-    onSave({
-      id: template?.id,
-      name: name.trim(),
-      venture: category,
-      work_type: workType,
-      default_focus: focus.trim() || null,
-      default_completion_condition: completionCondition.trim() || null,
-      use_ai_tasks: useAiTasks,
-      default_tasks: useAiTasks ? [] : tasks,
-    });
-    onClose();
+    setIsSaving(true);
+    try {
+      await onSave({
+        id: template?.id,
+        name: name.trim(),
+        venture: category,
+        work_type: workType,
+        default_focus: focus.trim() || null,
+        default_completion_condition: completionCondition.trim() || null,
+        use_ai_tasks: useAiTasks,
+        default_tasks: useAiTasks ? [] : tasks,
+      });
+      toast.success(isNew ? 'Workflow created!' : 'Workflow saved!');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to save workflow');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const addTask = () => {
@@ -124,7 +143,7 @@ export function TemplateEditModal({ template, isOpen, onClose, onSave, isNew = f
 
   const loadDefaultTasks = () => {
     if (workType) {
-      const defaults = defaultTasks[workType] || [];
+      const defaults = defaultTasks[workType as keyof typeof defaultTasks] || [];
       setTasks(defaults.map((text, idx) => ({
         id: `task-${idx}`,
         text,
@@ -133,20 +152,29 @@ export function TemplateEditModal({ template, isOpen, onClose, onSave, isNew = f
     }
   };
 
-  const categoryData = getCategoryById(category);
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isNew ? 'Create Template' : 'Edit Template'}</DialogTitle>
+          <DialogTitle>{isNew ? 'Create Workflow' : 'Edit Workflow'}</DialogTitle>
         </DialogHeader>
 
+        {venturesLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : ventures.length === 0 ? (
+          <div className="py-8 text-center">
+            <p className="text-muted-foreground mb-2">No categories found.</p>
+            <p className="text-sm text-muted-foreground">Complete onboarding to set up your categories.</p>
+          </div>
+        ) : (
+        <>
         <div className="space-y-5 py-4">
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              Template Name
+              Workflow Name
             </label>
             <input
               type="text"
@@ -157,7 +185,7 @@ export function TemplateEditModal({ template, isOpen, onClose, onSave, isNew = f
             />
           </div>
 
-          {/* Category */}
+          {/* Category - Dynamic from user ventures */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               Category
@@ -168,24 +196,30 @@ export function TemplateEditModal({ template, isOpen, onClose, onSave, isNew = f
               className="input-field"
             >
               <option value="">Select category...</option>
-              <optgroup label="Personal">
-                {categories.filter(c => c.type === 'personal').map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Projects">
-                {categories.filter(c => c.type === 'project').map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Business">
-                {categories.filter(c => c.type === 'business').map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </optgroup>
+              {personalVentures.length > 0 && (
+                <optgroup label="Personal">
+                  {personalVentures.map(v => (
+                    <option key={v.id} value={v.name}>{v.name}</option>
+                  ))}
+                </optgroup>
+              )}
+              {projectVentures.length > 0 && (
+                <optgroup label="Projects">
+                  {projectVentures.map(v => (
+                    <option key={v.id} value={v.name}>{v.name}</option>
+                  ))}
+                </optgroup>
+              )}
+              {businessVentures.length > 0 && (
+                <optgroup label="Business">
+                  {businessVentures.map(v => (
+                    <option key={v.id} value={v.name}>{v.name}</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
-            {categoryData && (
-              <p className="text-xs text-muted-foreground mt-1">{categoryData.tagline}</p>
+            {selectedVenture?.tagline && (
+              <p className="text-xs text-muted-foreground mt-1">{selectedVenture.tagline}</p>
             )}
           </div>
 
@@ -316,17 +350,26 @@ export function TemplateEditModal({ template, isOpen, onClose, onSave, isNew = f
 
         {/* Actions */}
         <div className="flex gap-3 pt-4 border-t border-border">
-          <button onClick={onClose} className="btn-secondary flex-1">
+          <button onClick={onClose} className="btn-secondary flex-1" disabled={isSaving}>
             Cancel
           </button>
           <button
             onClick={handleSave}
-            disabled={!name.trim() || !category || !workType}
-            className="btn-primary flex-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={!name.trim() || !category || !workType || isSaving}
+            className="btn-primary flex-1 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {isNew ? 'Create' : 'Save Changes'}
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              isNew ? 'Create' : 'Save Changes'
+            )}
           </button>
         </div>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
