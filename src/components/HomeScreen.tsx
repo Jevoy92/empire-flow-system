@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { ArrowRight, Play, Mic, Send, Square, MessageSquare, Check, Loader2, Sparkles, FolderOpen, ListChecks, CheckCircle2 } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { ArrowRight, Play, Mic, Send, Square, MessageSquare, Check, Sparkles, FolderOpen, ListChecks, CheckCircle2, Shuffle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,6 +42,14 @@ interface SmartSuggestion {
   };
 }
 
+interface Project {
+  id: string;
+  name: string;
+  venture: string;
+  current_stage: number;
+  stages: unknown;
+}
+
 interface HomeScreenProps {
   onStartSession: () => void;
 }
@@ -67,59 +75,123 @@ const getVentureColor = (venture: string): string => {
   return ventureColors[venture] || 'bg-primary';
 };
 
+// Generate rule-based suggestions (no AI calls)
+const generateSmartSuggestions = (
+  projects: Project[],
+  templates: Template[],
+  hour: number
+): SmartSuggestion[] => {
+  const suggestions: SmartSuggestion[] = [];
+  
+  // Priority 1: Active projects
+  projects.forEach(project => {
+    const stages = Array.isArray(project.stages) ? project.stages : [];
+    const currentStage = stages[project.current_stage] as { name?: string } | undefined;
+    suggestions.push({
+      label: `Continue: ${project.name}`,
+      description: currentStage?.name ? `Resume ${currentStage.name}` : 'Continue where you left off',
+      type: 'project',
+      data: { projectId: project.id, stageIndex: project.current_stage }
+    });
+  });
+  
+  // Priority 2: Time-based routines
+  if (hour < 10) {
+    suggestions.push({
+      label: 'Morning startup',
+      description: 'Start your day with intention',
+      type: 'routine',
+      data: { venture: 'daily-maintenance', workType: 'Morning Routine' }
+    });
+  } else if (hour >= 17) {
+    suggestions.push({
+      label: 'Evening shutdown',
+      description: 'Wrap up and plan tomorrow',
+      type: 'routine',
+      data: { venture: 'daily-maintenance', workType: 'Evening Routine' }
+    });
+  }
+  
+  // Priority 3: Recent templates
+  templates.slice(0, 3).forEach(template => {
+    suggestions.push({
+      label: `Quick: ${template.name}`,
+      description: `${template.venture} • ${template.work_type}`,
+      type: 'template',
+      data: { templateId: template.id }
+    });
+  });
+  
+  // Priority 4: General suggestions
+  suggestions.push({
+    label: 'Start a focused session',
+    description: 'Begin deep work',
+    type: 'session',
+    data: {}
+  });
+  
+  suggestions.push({
+    label: "What did I do yesterday?",
+    description: 'Review your history',
+    type: 'session',
+    data: {}
+  });
+  
+  return suggestions;
+};
+
 export function HomeScreen({ onStartSession }: HomeScreenProps) {
   const [recentTemplates, setRecentTemplates] = useState<Template[]>([]);
+  const [activeProjects, setActiveProjects] = useState<Project[]>([]);
   const [futureNotes, setFutureNotes] = useState<FutureNote[]>([]);
-  const [suggestions, setSuggestions] = useState<SmartSuggestion[]>([]);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+  const [shuffleIndex, setShuffleIndex] = useState(0);
   const [greeting] = useState(getGreeting());
   const [input, setInput] = useState('');
   const navigate = useNavigate();
-  const { profile, user } = useAuth();
+  const { profile } = useAuth();
   const { isRecording, isProcessing, partialText, startRecording, stopRecording, error } = useVoiceRecorder();
   const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer();
 
-  // Update input with partial text as user speaks
-  useEffect(() => {
-    if (isRecording && partialText) {
-      setInput(partialText);
-    }
-  }, [partialText, isRecording]);
+  // Generate suggestions locally (no AI call)
+  const allSuggestions = useMemo(() => {
+    const hour = new Date().getHours();
+    return generateSmartSuggestions(activeProjects, recentTemplates, hour);
+  }, [activeProjects, recentTemplates]);
 
-  const loadSmartSuggestions = useCallback(async () => {
-    if (!user) return;
-    
-    setSuggestionsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('smart-suggestions');
-      
-      if (error) {
-        console.error('Error fetching suggestions:', error);
-        // Fallback to basic suggestions
-        setSuggestions([
-          { label: 'Start a work session', description: 'Begin a focused work session', type: 'session', data: {} },
-          { label: "What did I do yesterday?", description: 'Review your history', type: 'session', data: {} },
-        ]);
-      } else if (data?.suggestions) {
-        setSuggestions(data.suggestions);
-      }
-    } catch (err) {
-      console.error('Failed to load suggestions:', err);
-    } finally {
-      setSuggestionsLoading(false);
+  // Get current visible suggestions based on shuffle index
+  const suggestions = useMemo(() => {
+    if (allSuggestions.length <= 4) return allSuggestions;
+    const startIdx = (shuffleIndex * 4) % allSuggestions.length;
+    const result: SmartSuggestion[] = [];
+    for (let i = 0; i < 4; i++) {
+      result.push(allSuggestions[(startIdx + i) % allSuggestions.length]);
     }
-  }, [user]);
+    return result;
+  }, [allSuggestions, shuffleIndex]);
+
+  const handleShuffle = () => {
+    setShuffleIndex(prev => prev + 1);
+  };
+
+  // Load active projects for suggestions
+  const loadActiveProjects = async () => {
+    const { data } = await supabase
+      .from('projects')
+      .select('id, name, venture, current_stage, stages')
+      .eq('status', 'active')
+      .order('updated_at', { ascending: false })
+      .limit(3);
+    
+    if (data) {
+      setActiveProjects(data);
+    }
+  };
 
   useEffect(() => {
     loadRecentTemplates();
     loadFutureNotes();
+    loadActiveProjects();
   }, []);
-
-  useEffect(() => {
-    if (user) {
-      loadSmartSuggestions();
-    }
-  }, [user, loadSmartSuggestions]);
 
   const loadRecentTemplates = async () => {
     const { data } = await supabase
@@ -282,12 +354,11 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 pb-24 bg-warm-gradient">
       <div className="w-full max-w-md animate-fade-in">
         
-        {/* Workflow Hierarchy Explainer - First time users */}
-        {showHierarchyExplainer && (
-          <div className="mb-6">
-            <WorkflowHierarchyExplainer onDismiss={dismissHierarchyExplainer} />
-          </div>
-        )}
+        {/* Workflow Hierarchy Explainer - Modal for first time users */}
+        <WorkflowHierarchyExplainer 
+          isOpen={showHierarchyExplainer} 
+          onDismiss={dismissHierarchyExplainer} 
+        />
 
         {/* Notes from Past You */}
         {futureNotes.length > 0 && (
@@ -430,52 +501,56 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
             )}
           </div>
 
-          {/* Smart AI-Powered Suggestions */}
+        {/* Smart Suggestions */}
           <div className="mt-4">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs font-medium text-muted-foreground">AI Suggestions</span>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-medium text-muted-foreground">Smart Suggestions</span>
+              </div>
+              {allSuggestions.length > 4 && (
+                <button
+                  onClick={handleShuffle}
+                  className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                  title="Shuffle suggestions"
+                >
+                  <Shuffle className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
-            {suggestionsLoading ? (
-              <div className="flex items-center justify-center gap-2 py-2 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">Loading suggestions...</span>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {suggestions.slice(0, 4).map((suggestion, idx) => {
-                  const getIcon = () => {
-                    switch (suggestion.type) {
-                      case 'project': return <FolderOpen className="w-3.5 h-3.5" />;
-                      case 'template': return <ListChecks className="w-3.5 h-3.5" />;
-                      case 'routine': return <CheckCircle2 className="w-3.5 h-3.5" />;
-                      default: return <Sparkles className="w-3.5 h-3.5" />;
-                    }
-                  };
-                  
-                  const getBg = () => {
-                    switch (suggestion.type) {
-                      case 'project': return 'bg-primary/10 hover:bg-primary/20 border-primary/20';
-                      case 'template': return 'bg-secondary/50 hover:bg-secondary border-border/50';
-                      case 'routine': return 'bg-green-500/10 hover:bg-green-500/20 border-green-500/20';
-                      default: return 'bg-secondary/50 hover:bg-secondary border-border/50';
-                    }
-                  };
-                  
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleSuggestionClick(suggestion)}
-                      className={`group px-3 py-2 rounded-lg text-sm text-foreground transition-all flex items-center gap-1.5 border ${getBg()}`}
-                      title={suggestion.description}
-                    >
-                      <span className="text-primary">{getIcon()}</span>
-                      {suggestion.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((suggestion, idx) => {
+                const getIcon = () => {
+                  switch (suggestion.type) {
+                    case 'project': return <FolderOpen className="w-3.5 h-3.5" />;
+                    case 'template': return <ListChecks className="w-3.5 h-3.5" />;
+                    case 'routine': return <CheckCircle2 className="w-3.5 h-3.5" />;
+                    default: return <Sparkles className="w-3.5 h-3.5" />;
+                  }
+                };
+                
+                const getBg = () => {
+                  switch (suggestion.type) {
+                    case 'project': return 'bg-primary/10 hover:bg-primary/20 border-primary/20';
+                    case 'template': return 'bg-secondary/50 hover:bg-secondary border-border/50';
+                    case 'routine': return 'bg-green-500/10 hover:bg-green-500/20 border-green-500/20';
+                    default: return 'bg-secondary/50 hover:bg-secondary border-border/50';
+                  }
+                };
+                
+                return (
+                  <button
+                    key={`${suggestion.label}-${idx}`}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className={`group px-3 py-2 rounded-lg text-sm text-foreground transition-all flex items-center gap-1.5 border ${getBg()}`}
+                    title={suggestion.description}
+                  >
+                    <span className="text-primary">{getIcon()}</span>
+                    {suggestion.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
