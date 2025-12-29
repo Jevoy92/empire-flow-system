@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      future_notes: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          note: string
+          sender_role: string
+          session_id: string | null
+          user_id: string
+          work_type: string | null
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          note: string
+          sender_role: string
+          session_id?: string | null
+          user_id: string
+          work_type?: string | null
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          note?: string
+          sender_role?: string
+          session_id?: string | null
+          user_id?: string
+          work_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "future_notes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
