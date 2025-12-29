@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { EnergyLevel, VentureId } from '@/types/empire';
-import { categories, workTypesByCategory, getCategoryById } from '@/data/ventures';
-import { Check, ChevronRight } from 'lucide-react';
+import { useUserVentures } from '@/hooks/useUserVentures';
+import { Check, ChevronRight, Loader2 } from 'lucide-react';
 
 interface SessionSetupProps {
   onLaunch: (config: {
@@ -30,13 +30,15 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
   const [workType, setWorkType] = useState<string>('');
   const [completedItems, setCompletedItems] = useState<number[]>([]);
 
+  const { personalVentures, projectVentures, businessVentures, loading, getWorkTypesForVenture } = useUserVentures();
+
   const canContinueDefinition = focus.trim() !== '' && completionCondition.trim() !== '';
   const canContinueCategory = selectedCategory !== null;
   const canContinueWorktype = workType !== '';
   const allSetupComplete = completedItems.length === setupChecklist.length;
 
   // Get available work types for selected category
-  const availableWorkTypes = selectedCategory ? (workTypesByCategory[selectedCategory] || []) : [];
+  const availableWorkTypes = selectedCategory ? getWorkTypesForVenture(selectedCategory) : [];
 
   const toggleItem = (id: number) => {
     setCompletedItems(prev =>
@@ -65,12 +67,13 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
     }
   };
 
-  // Group categories by type
-  const personalCategories = categories.filter(c => c.type === 'personal');
-  const projectCategories = categories.filter(c => c.type === 'project');
-  const businessCategories = categories.filter(c => c.type === 'business');
-
-  const selectedCategoryData = selectedCategory ? getCategoryById(selectedCategory) : null;
+  if (loading) {
+    return (
+      <div className="w-full max-w-lg flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-lg animate-fade-in">
@@ -144,79 +147,85 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
             
             <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2">
               {/* Personal */}
-              <div>
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Personal</h3>
-                <div className="space-y-2">
-                  {personalCategories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => {
-                        setSelectedCategory(cat.id);
-                        setWorkType(''); // Reset work type when category changes
-                      }}
-                      className={`checklist-item py-3 ${selectedCategory === cat.id ? 'completed border-primary' : ''}`}
-                    >
-                      <div className={`check-circle ${selectedCategory === cat.id ? 'checked' : ''}`}>
-                        {selectedCategory === cat.id && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">{cat.name}</div>
-                        <div className="text-xs text-muted-foreground">{cat.tagline}</div>
-                      </div>
-                    </button>
-                  ))}
+              {personalVentures.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Personal</h3>
+                  <div className="space-y-2">
+                    {personalVentures.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          setSelectedCategory(cat.name);
+                          setWorkType('');
+                        }}
+                        className={`checklist-item py-3 ${selectedCategory === cat.name ? 'completed border-primary' : ''}`}
+                      >
+                        <div className={`check-circle ${selectedCategory === cat.name ? 'checked' : ''}`}>
+                          {selectedCategory === cat.name && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">{cat.name}</div>
+                          {cat.tagline && <div className="text-xs text-muted-foreground">{cat.tagline}</div>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Projects */}
-              <div>
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Projects</h3>
-                <div className="space-y-2">
-                  {projectCategories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => {
-                        setSelectedCategory(cat.id);
-                        setWorkType('');
-                      }}
-                      className={`checklist-item py-3 ${selectedCategory === cat.id ? 'completed border-primary' : ''}`}
-                    >
-                      <div className={`check-circle ${selectedCategory === cat.id ? 'checked' : ''}`}>
-                        {selectedCategory === cat.id && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">{cat.name}</div>
-                        <div className="text-xs text-muted-foreground">{cat.tagline}</div>
-                      </div>
-                    </button>
-                  ))}
+              {projectVentures.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Projects</h3>
+                  <div className="space-y-2">
+                    {projectVentures.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          setSelectedCategory(cat.name);
+                          setWorkType('');
+                        }}
+                        className={`checklist-item py-3 ${selectedCategory === cat.name ? 'completed border-primary' : ''}`}
+                      >
+                        <div className={`check-circle ${selectedCategory === cat.name ? 'checked' : ''}`}>
+                          {selectedCategory === cat.name && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">{cat.name}</div>
+                          {cat.tagline && <div className="text-xs text-muted-foreground">{cat.tagline}</div>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Business */}
-              <div>
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Business</h3>
-                <div className="space-y-2">
-                  {businessCategories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => {
-                        setSelectedCategory(cat.id);
-                        setWorkType('');
-                      }}
-                      className={`checklist-item py-3 ${selectedCategory === cat.id ? 'completed border-primary' : ''}`}
-                    >
-                      <div className={`check-circle ${selectedCategory === cat.id ? 'checked' : ''}`}>
-                        {selectedCategory === cat.id && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">{cat.name}</div>
-                        <div className="text-xs text-muted-foreground">{cat.tagline}</div>
-                      </div>
-                    </button>
-                  ))}
+              {businessVentures.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Business</h3>
+                  <div className="space-y-2">
+                    {businessVentures.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          setSelectedCategory(cat.name);
+                          setWorkType('');
+                        }}
+                        className={`checklist-item py-3 ${selectedCategory === cat.name ? 'completed border-primary' : ''}`}
+                      >
+                        <div className={`check-circle ${selectedCategory === cat.name ? 'checked' : ''}`}>
+                          {selectedCategory === cat.name && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">{cat.name}</div>
+                          {cat.tagline && <div className="text-xs text-muted-foreground">{cat.tagline}</div>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="flex justify-between mt-10">
@@ -240,8 +249,8 @@ export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
           <div className="animate-slide-up">
             <h2 className="text-xl font-semibold mb-2">Work Type</h2>
             <p className="text-muted-foreground mb-2">What kind of work is this?</p>
-            {selectedCategoryData && (
-              <p className="text-xs text-primary mb-6">{selectedCategoryData.name}</p>
+            {selectedCategory && (
+              <p className="text-xs text-primary mb-6">{selectedCategory}</p>
             )}
             
             <div className="grid grid-cols-2 gap-3">
