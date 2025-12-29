@@ -1,6 +1,6 @@
 import { motion, Variants, Easing } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import { Mic, Layers, TrendingUp, ArrowRight, Play, Zap, Target, Clock, Flame } from "lucide-react";
+import { Mic, Layers, TrendingUp, ArrowRight, Play, Zap, Target, Clock, CheckCircle, Users, Brain, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface LandingPageProps {
@@ -24,28 +24,40 @@ export function LandingPage({ onTryDemo }: LandingPageProps) {
   const features = [
     {
       icon: Mic,
-      title: "Voice-first planning",
-      description: "Start a session by speaking. No friction. No spreadsheets pretending to be a life.",
+      title: "Voice-First Planning",
+      description: "Say what you're about to work on. Out loud. Clarity sharpens when it has to survive language.",
       color: "bg-blue-500/10 text-blue-500",
     },
     {
       icon: Layers,
-      title: "Templates + routines",
-      description: "Turn your best sessions into repeatable flows, so momentum becomes automatic.",
+      title: "Simple Session Structure",
+      description: "Start → Focus → Finish → Reflect. No dashboards pretending to be wisdom.",
       color: "bg-emerald-500/10 text-emerald-500",
     },
     {
-      icon: TrendingUp,
-      title: "Progress that matters",
-      description: "Track sessions, streaks, and outcomes—not busywork metrics.",
+      icon: Heart,
+      title: "Memory Without Shame",
+      description: "The app remembers past sessions so you don't have to. No streak pressure. No guilt metrics.",
+      color: "bg-rose-500/10 text-rose-500",
+    },
+    {
+      icon: Users,
+      title: "Designed for Builders",
+      description: "Founders, creatives, operators, thinkers. People whose work doesn't fit neatly into checkboxes.",
       color: "bg-violet-500/10 text-violet-500",
     },
   ];
 
   const steps = [
-    { icon: Target, title: "Set your intent", description: "Define what you'll accomplish" },
-    { icon: Clock, title: "Focus deeply", description: "Work with guided structure" },
-    { icon: Flame, title: "Build momentum", description: "See your progress compound" },
+    { icon: Target, title: "Set the session", description: "Speak the intention and choose a duration." },
+    { icon: Clock, title: "Run the session", description: "One job. One window of time. Fewer escape hatches." },
+    { icon: CheckCircle, title: "Log reality", description: "What worked. What didn't. No spin." },
+  ];
+
+  const problems = [
+    "You open your laptop with a plan… then drift.",
+    "You over-prepare instead of starting.",
+    "You finish the day busy, but unsure what actually moved.",
   ];
 
   return (
@@ -77,45 +89,34 @@ export function LandingPage({ onTryDemo }: LandingPageProps) {
       {/* Hero */}
       <section className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 pb-20 pt-12 md:grid-cols-2 md:pt-20">
         <div className="flex flex-col justify-center">
-          <motion.div
-            initial="hidden"
-            animate="show"
-            variants={fadeUp}
-            custom={0}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 w-fit"
-          >
-            <Mic className="w-4 h-4" />
-            Voice-first productivity
-          </motion.div>
-
           <motion.h1
             initial="hidden"
             animate="show"
             variants={fadeUp}
-            custom={1}
+            custom={0}
             className="text-balance text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl"
           >
-            Master your focus.
+            Do the work you
             <br />
-            <span className="text-primary">Build your empire.</span>
+            <span className="text-primary">actually meant to do.</span>
           </motion.h1>
 
           <motion.p
             initial="hidden"
             animate="show"
             variants={fadeUp}
-            custom={2}
+            custom={1}
             className="mt-6 max-w-xl text-pretty text-base text-muted-foreground md:text-lg"
           >
-            A voice-first work session system: plan fast, execute clean, track what you actually did.
-            No productivity cosplay.
+            A focus system for running intentional work sessions—without overplanning, 
+            guilt spirals, or productivity theater.
           </motion.p>
 
           <motion.div
             initial="hidden"
             animate="show"
             variants={fadeUp}
-            custom={3}
+            custom={2}
             className="mt-8 flex flex-col gap-3 sm:flex-row"
           >
             <Button
@@ -134,7 +135,7 @@ export function LandingPage({ onTryDemo }: LandingPageProps) {
               className="gap-2"
             >
               <Play className="w-4 h-4" />
-              Try demo
+              Try a demo session
             </Button>
           </motion.div>
 
@@ -142,7 +143,7 @@ export function LandingPage({ onTryDemo }: LandingPageProps) {
             initial="hidden"
             animate="show"
             variants={fadeUp}
-            custom={4}
+            custom={3}
             className="mt-5 text-sm text-muted-foreground"
           >
             Already have an account?{" "}
@@ -200,26 +201,113 @@ export function LandingPage({ onTryDemo }: LandingPageProps) {
         </motion.div>
       </section>
 
-      {/* Features */}
+      {/* Sub-Hero Clarifier */}
+      <section className="mx-auto max-w-4xl px-6 pb-20 text-center">
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={fadeUp}
+          custom={0}
+        >
+          <p className="text-xl md:text-2xl font-medium text-foreground">
+            Most productivity tools help you organize tasks.
+            <br />
+            <span className="text-muted-foreground">This one helps you finish sessions.</span>
+          </p>
+          <p className="mt-6 text-muted-foreground max-w-2xl mx-auto">
+            You decide what matters. The app helps you stay with it—then remembers what happened so tomorrow gets easier.
+          </p>
+        </motion.div>
+      </section>
+
+      {/* Problem Section */}
       <section className="bg-secondary/30 border-y border-border">
-        <div className="mx-auto max-w-6xl px-6 py-20">
+        <div className="mx-auto max-w-4xl px-6 py-20">
           <motion.div
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-100px" }}
             variants={fadeUp}
             custom={0}
-            className="text-center mb-12"
+            className="text-center mb-10"
           >
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Built for real work, not productivity theater
+              You don't need another task manager.
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              Simple tools that help you ship, not distract you from shipping.
+              You already know what you should be working on. What's missing is the bridge between intention and execution.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="space-y-4 max-w-xl mx-auto">
+            {problems.map((problem, i) => (
+              <motion.div
+                key={problem}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, margin: "-50px" }}
+                variants={fadeUp}
+                custom={i}
+                className="flex items-start gap-3 p-4 rounded-xl bg-background border border-border"
+              >
+                <div className="w-2 h-2 rounded-full bg-muted-foreground/50 mt-2 shrink-0" />
+                <p className="text-foreground">{problem}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.p
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            custom={4}
+            className="mt-8 text-center text-muted-foreground"
+          >
+            This isn't a motivation problem. <span className="text-foreground font-medium">It's a session design problem.</span>
+          </motion.p>
+        </div>
+      </section>
+
+      {/* Solution Section */}
+      <section className="mx-auto max-w-4xl px-6 py-20 text-center">
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={fadeUp}
+          custom={0}
+        >
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+            This app is built around one thing:
+            <br />
+            <span className="text-primary">a single, focused work session.</span>
+          </h2>
+          <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">
+            Not your entire life. Not your five-year plan.
+            <br />
+            Just the next 25–60 minutes done well.
+          </p>
+          <div className="mt-8 p-6 rounded-2xl bg-card border border-border max-w-md mx-auto">
+            <p className="text-foreground">
+              You speak your intention.
+              <br />
+              You run the session.
+              <br />
+              You log what actually happened.
+            </p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              That's it. Repeat until momentum becomes boring.
+            </p>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Features - reframed as outcomes */}
+      <section className="bg-secondary/30 border-y border-border">
+        <div className="mx-auto max-w-6xl px-6 py-20">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {features.map((f, i) => (
               <motion.div
                 key={f.title}
@@ -254,9 +342,6 @@ export function LandingPage({ onTryDemo }: LandingPageProps) {
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
             How it works
           </h2>
-          <p className="mt-4 text-muted-foreground">
-            Three steps to focused work that actually ships.
-          </p>
         </motion.div>
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
@@ -285,43 +370,40 @@ export function LandingPage({ onTryDemo }: LandingPageProps) {
             </motion.div>
           ))}
         </div>
+
+        <motion.p
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          variants={fadeUp}
+          custom={4}
+          className="mt-12 text-center text-muted-foreground max-w-lg mx-auto"
+        >
+          Over time, patterns emerge. And suddenly your days feel… cooperative.
+        </motion.p>
       </section>
 
-      {/* Stats */}
+      {/* Social Proof / Positioning */}
       <section className="py-16 px-6 bg-primary/5 border-y border-primary/10">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-3 gap-8 text-center">
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              variants={fadeUp}
-              custom={0}
-            >
-              <div className="text-3xl font-bold text-foreground">∞</div>
-              <div className="text-sm text-muted-foreground mt-1">Focus sessions</div>
-            </motion.div>
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              variants={fadeUp}
-              custom={1}
-            >
-              <div className="text-3xl font-bold text-foreground">12+</div>
-              <div className="text-sm text-muted-foreground mt-1">Achievements</div>
-            </motion.div>
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              variants={fadeUp}
-              custom={2}
-            >
-              <div className="text-3xl font-bold text-foreground">100%</div>
-              <div className="text-sm text-muted-foreground mt-1">Free to start</div>
-            </motion.div>
-          </div>
+        <div className="max-w-3xl mx-auto text-center">
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            custom={0}
+          >
+            <p className="text-xl md:text-2xl font-medium text-foreground">
+              This isn't about being productive.
+              <br />
+              <span className="text-muted-foreground">It's about being honest with your attention.</span>
+            </p>
+            <p className="mt-6 text-muted-foreground">
+              People who use this tool don't "optimize their workflow."
+              <br />
+              They build trust with themselves again.
+            </p>
+          </motion.div>
         </div>
       </section>
 
@@ -337,14 +419,14 @@ export function LandingPage({ onTryDemo }: LandingPageProps) {
           >
             <h2 className="text-3xl font-bold mb-4">Ready to work like you mean it?</h2>
             <p className="text-muted-foreground mb-8">
-              Create a free account in under a minute.
+              Create a free account and run your first session in under a minute.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button onClick={() => onTryDemo?.()} variant="outline" size="lg">
-                Try demo first
+                Try a demo session
               </Button>
               <Button onClick={() => navigate("/auth")} size="lg" className="gap-2">
-                Create free account
+                Get started free
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </div>
@@ -363,7 +445,7 @@ export function LandingPage({ onTryDemo }: LandingPageProps) {
               <span className="font-semibold">FocusFlow</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Built for makers who ship.
+              Less noise. More finished days.
             </p>
           </div>
         </div>

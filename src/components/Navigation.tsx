@@ -3,19 +3,23 @@ import { Home, History, Layers, Settings, Sparkles } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { AICommandCenter } from '@/components/AICommandCenter';
 import { useSession } from '@/contexts/SessionContext';
+import { useAuth } from '@/hooks/useAuth';
 
 export function Navigation() {
   const location = useLocation();
   const [isAIOpen, setIsAIOpen] = useState(false);
   const { isActive, isMinimized } = useSession();
+  const { isAuthenticated } = useAuth();
 
-  // Hide navigation during active full-screen session, onboarding, auth, or landing page (unauthenticated home)
+  // Hide navigation during active full-screen session, onboarding, auth, or landing page
   const isFullScreenSession = location.pathname === '/session' && isActive && !isMinimized;
   const isLandingOrAuth = location.pathname === '/auth' || location.pathname === '/onboarding';
   const isDemo = location.search.includes('demo=1');
   
-  // Hide nav on landing page (when on "/" without demo mode - actual landing is shown)
-  if (isFullScreenSession || isLandingOrAuth) {
+  // Hide nav on landing page (when on "/" AND not authenticated AND not in demo mode)
+  const isLandingPage = location.pathname === '/' && !isAuthenticated && !isDemo;
+  
+  if (isFullScreenSession || isLandingOrAuth || isLandingPage) {
     return null;
   }
 
