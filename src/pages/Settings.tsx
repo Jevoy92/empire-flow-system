@@ -273,6 +273,14 @@ export default function Settings() {
               <p className="text-sm text-muted-foreground truncate">
                 {user?.email}
               </p>
+              {/* Show character motivation */}
+              {avatarUrl?.startsWith('character:') && (() => {
+                const charId = avatarUrl.replace('character:', '');
+                const char = characterAvatars.find(c => c.id === charId);
+                return char ? (
+                  <p className="text-xs text-primary/80 italic mt-1">"{char.motivation}"</p>
+                ) : null;
+              })()}
             </div>
             {!isEditing && (
               <button
