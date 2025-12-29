@@ -1,12 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Sparkles, Layers } from 'lucide-react';
+import { Send, Loader2, Sparkles, Mic, MicOff, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { TemplatePreviewCard } from './TemplatePreviewCard';
 import { ProjectPreviewCard } from './ProjectPreviewCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { z } from 'zod';
+
+// Schema validation for AI-generated ventures
+const VentureSchema = z.object({
+  name: z.string().min(1).max(100),
+  type: z.enum(['business', 'personal', 'project']),
+  tagline: z.string().max(200).optional().default(''),
+  work_types: z.array(z.string()).optional().default([]),
+});
 
 // Schema validation for AI-generated templates
 const TemplateSchema = z.object({
@@ -31,6 +40,14 @@ const ProjectSchema = z.object({
   description: z.string().max(500).optional().default(''),
   stages: z.array(ProjectStageSchema).min(1).max(10),
 });
+
+interface VentureData {
+  name: string;
+  type: 'business' | 'personal' | 'project';
+  tagline: string;
+  work_types: string[];
+}
+
 interface TemplateData {
   name: string;
   venture: string;
@@ -57,6 +74,7 @@ interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  ventures?: VentureData[];
   templates?: TemplateData[];
   projects?: ProjectData[];
 }
@@ -71,13 +89,17 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [savedVentures, setSavedVentures] = useState<Set<string>>(new Set());
   const [savedTemplates, setSavedTemplates] = useState<Set<string>>(new Set());
   const [savedProjects, setSavedProjects] = useState<Set<string>>(new Set());
   const [allTemplates, setAllTemplates] = useState<TemplateData[]>([]);
   const [lastApprovedTemplate, setLastApprovedTemplate] = useState<TemplateData | undefined>();
+  const [hasGenerated, setHasGenerated] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
+  
+  const { isRecording, isProcessing, partialText, startRecording, stopRecording, error: voiceError } = useVoiceRecorder();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -85,22 +107,54 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, partialText]);
 
-  // Start conversation on mount
+  // Show voice errors as toast
   useEffect(() => {
-    startConversation();
-  }, []);
+    if (voiceError) {
+      toast({
+        variant: 'destructive',
+        title: 'Microphone Error',
+        description: voiceError,
+      });
+    }
+  }, [voiceError, toast]);
 
-  const parseContentBlocks = (content: string): { text: string; templates: TemplateData[]; projects: ProjectData[] } => {
+  // Update input with partial transcription
+  useEffect(() => {
+    if (partialText && isRecording) {
+      setInput(partialText);
+    }
+  }, [partialText, isRecording]);
+
+  const parseContentBlocks = (content: string): { 
+    text: string; 
+    ventures: VentureData[];
+    templates: TemplateData[]; 
+    projects: ProjectData[] 
+  } => {
+    const ventures: VentureData[] = [];
     const templates: TemplateData[] = [];
     const projects: ProjectData[] = [];
     
     let text = content;
     
+    // Parse ventures
+    const ventureRegex = /\[VENTURE\](.*?)\[\/VENTURE\]/gs;
+    let match;
+    while ((match = ventureRegex.exec(content)) !== null) {
+      try {
+        const parsed = JSON.parse(match[1]);
+        const validated = VentureSchema.parse(parsed);
+        ventures.push(validated as VentureData);
+        text = text.replace(match[0], '');
+      } catch (e) {
+        console.error('Failed to parse/validate venture:', match[1], e);
+      }
+    }
+    
     // Parse templates with schema validation
     const templateRegex = /\[TEMPLATE\](.*?)\[\/TEMPLATE\]/gs;
-    let match;
     while ((match = templateRegex.exec(content)) !== null) {
       try {
         const parsed = JSON.parse(match[1]);
@@ -108,8 +162,7 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
         templates.push(validated as TemplateData);
         text = text.replace(match[0], '');
       } catch (e) {
-        console.error('Failed to parse/validate template:', e);
-        // Don't add invalid templates
+        console.error('Failed to parse/validate template:', match[1], e);
       }
     }
     
@@ -122,35 +175,14 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
         projects.push(validated as ProjectData);
         text = text.replace(match[0], '');
       } catch (e) {
-        console.error('Failed to parse/validate project:', e);
-        // Don't add invalid projects
+        console.error('Failed to parse/validate project:', match[1], e);
       }
     }
     
-    return { text: text.trim(), templates, projects };
-  };
-
-  const startConversation = async () => {
-    setIsLoading(true);
-    
-    try {
-      const initialMessage = userName 
-        ? `My name is ${userName}. I'm ready to set up my workspace!`
-        : 'Hi! I just signed up and want to set up my workspace.';
-      
-      await streamMessage([{ role: 'user' as const, content: initialMessage }]);
-    } catch (error) {
-      console.error('Failed to start conversation:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to start the conversation. Please refresh and try again.',
-      });
-    }
+    return { text: text.trim(), ventures, templates, projects };
   };
 
   const streamMessage = async (conversationHistory: { role: 'user' | 'assistant'; content: string }[]) => {
-    // Get the user's actual session token for authentication
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     
@@ -181,8 +213,7 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
     let fullContent = '';
     const messageId = Date.now().toString();
 
-    // Add empty assistant message that we'll update
-    setMessages(prev => [...prev, { id: messageId, role: 'assistant', content: '', templates: [], projects: [] }]);
+    setMessages(prev => [...prev, { id: messageId, role: 'assistant', content: '', ventures: [], templates: [], projects: [] }]);
 
     while (true) {
       const { done, value } = await reader.read();
@@ -190,7 +221,6 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
 
       buffer += decoder.decode(value, { stream: true });
       
-      // Process complete SSE lines
       let newlineIndex;
       while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
         let line = buffer.slice(0, newlineIndex);
@@ -208,11 +238,11 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
           const content = parsed.choices?.[0]?.delta?.content;
           if (content) {
             fullContent += content;
-            const { text, templates, projects } = parseContentBlocks(fullContent);
+            const { text, ventures, templates, projects } = parseContentBlocks(fullContent);
             
             setMessages(prev => prev.map(msg => 
               msg.id === messageId 
-                ? { ...msg, content: text, templates, projects }
+                ? { ...msg, content: text, ventures, templates, projects }
                 : msg
             ));
           }
@@ -223,20 +253,71 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
     }
 
     // Final parse
-    const { text, templates, projects } = parseContentBlocks(fullContent);
+    const { text, ventures, templates, projects } = parseContentBlocks(fullContent);
+    
+    console.log('Final parsed content:', { ventures: ventures.length, templates: templates.length, projects: projects.length });
+    
     setMessages(prev => prev.map(msg => 
       msg.id === messageId 
-        ? { ...msg, content: text, templates, projects }
+        ? { ...msg, content: text, ventures, templates, projects }
         : msg
     ));
 
-    // Add new templates to our collection
+    // Auto-save ventures immediately (they don't need approval)
+    if (ventures.length > 0) {
+      await saveVentures(ventures);
+    }
+
     if (templates.length > 0) {
       setAllTemplates(prev => [...prev, ...templates]);
     }
 
+    setHasGenerated(true);
     setIsLoading(false);
-    inputRef.current?.focus();
+    textareaRef.current?.focus();
+  };
+
+  const saveVentures = async (ventures: VentureData[]) => {
+    for (const venture of ventures) {
+      try {
+        const { error } = await supabase.from('user_ventures').upsert({
+          user_id: userId,
+          name: venture.name,
+          type: venture.type,
+          tagline: venture.tagline,
+          work_types: venture.work_types,
+        }, {
+          onConflict: 'user_id,name'
+        });
+
+        if (error) {
+          console.error('Failed to save venture:', venture.name, error);
+        } else {
+          setSavedVentures(prev => new Set([...prev, venture.name]));
+        }
+      } catch (e) {
+        console.error('Error saving venture:', e);
+      }
+    }
+  };
+
+  const handleVoiceToggle = async () => {
+    if (isRecording) {
+      const finalText = await stopRecording();
+      if (finalText) {
+        setInput(finalText);
+        toast({
+          title: 'Recording complete',
+          description: 'Review your transcription and tap Send when ready.',
+        });
+      }
+    } else {
+      await startRecording();
+      toast({
+        title: 'Recording started',
+        description: 'Speak naturally about your work and projects...',
+      });
+    }
   };
 
   const handleSend = async () => {
@@ -253,10 +334,10 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
     setIsLoading(true);
 
     try {
-      // Build conversation history for context
       const history = [...messages, userMessage].map(m => ({
         role: m.role,
         content: m.content + 
+          (m.ventures?.map(v => `[VENTURE]${JSON.stringify(v)}[/VENTURE]`).join('') || '') +
           (m.templates?.map(t => `[TEMPLATE]${JSON.stringify(t)}[/TEMPLATE]`).join('') || '') +
           (m.projects?.map(p => `[PROJECT]${JSON.stringify(p)}[/PROJECT]`).join('') || ''),
       }));
@@ -278,7 +359,6 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
     if (savedTemplates.has(templateKey)) return;
 
     try {
-      // Save to database
       const { error } = await supabase.from('templates').insert({
         user_id: userId,
         name: template.name,
@@ -313,7 +393,6 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
     if (savedProjects.has(projectKey)) return;
 
     try {
-      // Convert project stages to the format expected by project_templates
       const stages = project.stages.map(stage => ({
         name: stage.name,
         workType: stage.workType,
@@ -321,7 +400,6 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
         defaultTasks: stage.defaultTasks,
       }));
 
-      // Save to project_templates table
       const { error } = await supabase.from('project_templates').insert({
         user_id: userId,
         name: project.name,
@@ -356,6 +434,20 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
 
   return (
     <div className="flex flex-col h-full max-h-[80vh]">
+      {/* Header prompt */}
+      {messages.length === 0 && (
+        <div className="p-6 text-center">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="w-8 h-8 text-primary" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Tell me about your work</h2>
+          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+            Speak or type about your projects, businesses, routines, and anything you want to focus on. 
+            I'll create personalized templates for you.
+          </p>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
@@ -364,7 +456,6 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div className={`max-w-[85%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
-              {/* Avatar */}
               {message.role === 'assistant' && (
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
@@ -374,7 +465,6 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
                 </div>
               )}
               
-              {/* Message bubble with subtle animation */}
               <div className={`rounded-2xl px-4 py-3 animate-message-in ${
                 message.role === 'user' 
                   ? 'bg-primary text-primary-foreground rounded-br-md' 
@@ -382,6 +472,28 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
               }`}>
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               </div>
+
+              {/* Ventures - show as badges */}
+              {message.ventures && message.ventures.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {message.ventures.map((venture, i) => (
+                    <div 
+                      key={`venture-${i}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium"
+                    >
+                      <span className={`w-2 h-2 rounded-full ${
+                        venture.type === 'business' ? 'bg-blue-500' :
+                        venture.type === 'personal' ? 'bg-green-500' :
+                        'bg-orange-500'
+                      }`} />
+                      {venture.name}
+                      {savedVentures.has(venture.name) && (
+                        <span className="text-[10px] text-muted-foreground ml-1">✓</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Templates */}
               {message.templates && message.templates.length > 0 && (
@@ -414,8 +526,17 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
           </div>
         ))}
 
-        {/* Typing indicator - calmer pulsing style */}
-        {isLoading && messages.length > 0 && (
+        {/* Live transcription preview */}
+        {isRecording && partialText && (
+          <div className="flex justify-end">
+            <div className="max-w-[85%] bg-primary/10 text-foreground rounded-2xl rounded-br-md px-4 py-3 animate-pulse-subtle">
+              <p className="text-sm italic">{partialText}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Typing indicator */}
+        {isLoading && (
           <div className="flex justify-start animate-message-in">
             <div className="max-w-[85%]">
               <div className="flex items-center gap-2 mb-1">
@@ -425,7 +546,7 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
                 <span className="text-xs text-muted-foreground font-medium">Focus AI</span>
               </div>
               <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3 border-l-2 border-primary/20">
-                <span className="text-sm text-muted-foreground animate-pulse-subtle">Thinking...</span>
+                <span className="text-sm text-muted-foreground animate-pulse-subtle">Creating your templates...</span>
               </div>
             </div>
           </div>
@@ -444,26 +565,62 @@ export function OnboardingChat({ userId, userName, onComplete }: OnboardingChatP
             </Button>
           </div>
         )}
-        <form 
-          onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-          className="flex gap-2"
-        >
-          <Input
-            ref={inputRef}
+
+        {hasGenerated && !hasApprovedItems && (
+          <p className="text-xs text-muted-foreground text-center mb-3">
+            Tap the templates above to save them, then start a session
+          </p>
+        )}
+
+        <div className="flex gap-2">
+          {/* Voice button */}
+          <Button
+            type="button"
+            variant={isRecording ? 'destructive' : 'outline'}
+            size="icon"
+            onClick={handleVoiceToggle}
+            disabled={isLoading || isProcessing}
+            className="shrink-0"
+          >
+            {isProcessing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isRecording ? (
+              <Square className="w-4 h-4" />
+            ) : (
+              <Mic className="w-4 h-4" />
+            )}
+          </Button>
+
+          <Textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
-            disabled={isLoading}
-            className="flex-1"
+            placeholder={isRecording ? "Listening..." : "Tell me about your work, projects, and routines..."}
+            disabled={isLoading || isRecording}
+            className="flex-1 min-h-[44px] max-h-[120px] resize-none"
+            rows={1}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
           />
-          <Button type="submit" disabled={!input.trim() || isLoading} size="icon">
+
+          <Button 
+            type="button" 
+            onClick={handleSend}
+            disabled={!input.trim() || isLoading || isRecording} 
+            size="icon"
+            className="shrink-0"
+          >
             {isLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Send className="w-4 h-4" />
             )}
           </Button>
-        </form>
+        </div>
       </div>
     </div>
   );

@@ -431,6 +431,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_ventures: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          name: string
+          tagline: string | null
+          type: string
+          updated_at: string | null
+          user_id: string
+          work_types: string[] | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          tagline?: string | null
+          type?: string
+          updated_at?: string | null
+          user_id: string
+          work_types?: string[] | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          tagline?: string | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+          work_types?: string[] | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
