@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserStats } from '@/hooks/useUserStats';
 import { achievements } from '@/data/achievements';
 import { characterAvatars } from '@/data/avatars';
-import { ArrowLeft, Loader2, LogOut, User, Trophy, Flame, Clock, CheckCircle2, FolderKanban, ChevronRight, Palette, Timer, Info, Lock, Trash2, Camera } from 'lucide-react';
+import { ArrowLeft, Loader2, LogOut, User, Trophy, Flame, Clock, CheckCircle2, FolderKanban, ChevronRight, Palette, Timer, Info, Lock, Trash2, Camera, AlertCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import {
   Select,
@@ -29,6 +29,7 @@ import StatDetailSheet from '@/components/StatDetailSheet';
 import { AvatarPicker } from '@/components/AvatarPicker';
 import { ChangePasswordModal } from '@/components/ChangePasswordModal';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
+import { useDemo } from '@/contexts/DemoContext';
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -63,7 +64,12 @@ export default function Settings() {
   const { stats, loading: statsLoading, unlockedCount, totalCount, progressPercentage } = useUserStats();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme: currentTheme, setTheme: setAppTheme } = useTheme();
+  const demo = useDemo();
+  
+  const isDemo = location.search.includes('demo=1');
+  const demoSuffix = isDemo ? '?demo=1' : '';
 
   const [displayName, setDisplayName] = useState('');
   const [theme, setTheme] = useState('system');
@@ -79,10 +85,15 @@ export default function Settings() {
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  // Auth check removed - handled by ProtectedRoute
+  // Use demo data if in demo mode
+  const displayedStats = isDemo && demo ? demo.stats : stats;
+  const displayedProfile = isDemo && demo ? demo.profile : profile;
 
   useEffect(() => {
-    if (profile) {
+    if (isDemo && demo) {
+      setDisplayName(demo.profile.display_name);
+      setAvatarUrl(demo.profile.avatar_url);
+    } else if (profile) {
       setDisplayName(profile.display_name || '');
       setAvatarUrl(profile.avatar_url);
     }
@@ -92,7 +103,7 @@ export default function Settings() {
       // Apply saved theme on load
       setAppTheme(settings.theme);
     }
-  }, [profile, settings, setAppTheme]);
+  }, [profile, settings, setAppTheme, isDemo, demo]);
 
   // Apply theme immediately when changed for preview
   const handleThemeChange = (newTheme: string) => {
@@ -101,6 +112,15 @@ export default function Settings() {
   };
 
   const handleSave = async () => {
+    if (isDemo) {
+      toast({
+        title: 'Demo mode',
+        description: "Settings don't persist in demo mode. Sign up to save your preferences!",
+      });
+      setIsEditing(false);
+      return;
+    }
+    
     setIsSaving(true);
     try {
       const profileUpdates: { display_name?: string } = {};
@@ -143,6 +163,11 @@ export default function Settings() {
   };
 
   const handleSignOut = async () => {
+    if (isDemo) {
+      navigate('/');
+      return;
+    }
+    
     setIsSigningOut(true);
     try {
       await signOut();
@@ -176,9 +201,14 @@ export default function Settings() {
 
   // Get recently unlocked achievements (last 3)
   const recentlyUnlocked = achievements
-    .filter(a => stats.achievements_unlocked.includes(a.id))
+    .filter(a => displayedStats.achievements_unlocked.includes(a.id))
     .slice(-3)
     .reverse();
+
+  // Calculate achievement progress for demo
+  const demoUnlockedCount = isDemo ? displayedStats.achievements_unlocked.length : unlockedCount;
+  const demoTotalCount = isDemo ? achievements.length : totalCount;
+  const demoProgressPercentage = isDemo ? Math.round((demoUnlockedCount / demoTotalCount) * 100) : progressPercentage;
 
   // Get avatar display
   const getAvatarDisplay = () => {
@@ -203,8 +233,9 @@ export default function Settings() {
       );
     }
     // Default: initials
-    const initials = displayName
-      ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    const name = isDemo ? displayedProfile?.display_name : displayName;
+    const initials = name
+      ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
       : user?.email?.[0]?.toUpperCase() || '?';
     return (
       <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xl font-bold">
@@ -213,7 +244,7 @@ export default function Settings() {
     );
   };
 
-  if (loading || statsLoading) {
+  if ((loading || statsLoading) && !isDemo) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -232,7 +263,7 @@ export default function Settings() {
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/' + demoSuffix)}
             className="p-2 rounded-lg hover:bg-muted transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -240,20 +271,45 @@ export default function Settings() {
           <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
         </div>
 
+        {/* Demo Mode Banner */}
+        {isDemo && (
+          <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-primary mt-0.5" />
+              <div>
+                <p className="font-medium text-foreground">Demo Mode</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  You're exploring with sample data. Sign up to save your progress and unlock all features!
+                </p>
+                <Button 
+                  size="sm" 
+                  className="mt-3"
+                  onClick={() => navigate('/auth')}
+                >
+                  Sign Up Free
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Profile Hero */}
         <div className="relative p-6 rounded-2xl bg-primary/5 border border-primary/20 mb-6">
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => setShowAvatarPicker(true)}
-              className="relative group"
+              onClick={() => !isDemo && setShowAvatarPicker(true)}
+              className={`relative group ${isDemo ? 'cursor-default' : ''}`}
+              disabled={isDemo}
             >
               {getAvatarDisplay()}
-              <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <Camera className="w-5 h-5 text-white" />
-              </div>
+              {!isDemo && (
+                <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <Camera className="w-5 h-5 text-white" />
+                </div>
+              )}
             </button>
             <div className="flex-1 min-w-0">
-              {isEditing ? (
+              {isEditing && !isDemo ? (
                 <Input
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
@@ -263,11 +319,11 @@ export default function Settings() {
                 />
               ) : (
                 <h2 className="text-xl font-semibold text-foreground truncate">
-                  {displayName || 'Set your name'}
+                  {isDemo ? displayedProfile?.display_name : displayName || 'Set your name'}
                 </h2>
               )}
               <p className="text-sm text-muted-foreground truncate">
-                {user?.email}
+                {isDemo ? 'demo@example.com' : user?.email}
               </p>
               {/* Show character motivation */}
               {avatarUrl?.startsWith('character:') && (() => {
@@ -278,7 +334,7 @@ export default function Settings() {
                 ) : null;
               })()}
             </div>
-            {!isEditing && (
+            {!isEditing && !isDemo && (
               <button
                 onClick={() => setIsEditing(true)}
                 className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors"
@@ -287,7 +343,7 @@ export default function Settings() {
               </button>
             )}
           </div>
-          {isEditing && (
+          {isEditing && !isDemo && (
             <div className="flex gap-2 mt-4">
               <Button variant="ghost" size="sm" onClick={() => {
                 setIsEditing(false);
@@ -303,7 +359,7 @@ export default function Settings() {
         </div>
 
         {/* Avatar Picker */}
-        {user && (
+        {user && !isDemo && (
           <AvatarPicker
             open={showAvatarPicker}
             onOpenChange={setShowAvatarPicker}
@@ -318,58 +374,62 @@ export default function Settings() {
           <StatCard
             icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
             label="Sessions"
-            value={stats.total_sessions_completed}
+            value={displayedStats.total_sessions_completed}
             bgColor="bg-emerald-500/10"
-            onClick={() => setActiveStatSheet('sessions')}
+            onClick={() => !isDemo && setActiveStatSheet('sessions')}
           />
           <StatCard
             icon={<Clock className="w-4 h-4 text-blue-500" />}
             label="Time Focused"
-            value={formatTime(stats.total_minutes_worked)}
+            value={formatTime(displayedStats.total_minutes_worked)}
             bgColor="bg-blue-500/10"
-            onClick={() => setActiveStatSheet('time')}
+            onClick={() => !isDemo && setActiveStatSheet('time')}
           />
           <StatCard
             icon={<Flame className="w-4 h-4 text-orange-500" />}
             label="Day Streak"
-            value={stats.current_streak}
+            value={displayedStats.current_streak}
             bgColor="bg-orange-500/10"
-            onClick={() => setActiveStatSheet('streak')}
+            onClick={() => !isDemo && setActiveStatSheet('streak')}
           />
           <StatCard
             icon={<FolderKanban className="w-4 h-4 text-violet-500" />}
             label="Projects Done"
-            value={stats.projects_completed}
+            value={displayedStats.projects_completed}
             bgColor="bg-violet-500/10"
-            onClick={() => setActiveStatSheet('projects')}
+            onClick={() => !isDemo && setActiveStatSheet('projects')}
           />
         </div>
 
-        {/* Stat Detail Sheets */}
-        <StatDetailSheet
-          open={activeStatSheet === 'sessions'}
-          onOpenChange={(open) => !open && setActiveStatSheet(null)}
-          type="sessions"
-          stats={stats}
-        />
-        <StatDetailSheet
-          open={activeStatSheet === 'time'}
-          onOpenChange={(open) => !open && setActiveStatSheet(null)}
-          type="time"
-          stats={stats}
-        />
-        <StatDetailSheet
-          open={activeStatSheet === 'streak'}
-          onOpenChange={(open) => !open && setActiveStatSheet(null)}
-          type="streak"
-          stats={stats}
-        />
-        <StatDetailSheet
-          open={activeStatSheet === 'projects'}
-          onOpenChange={(open) => !open && setActiveStatSheet(null)}
-          type="projects"
-          stats={stats}
-        />
+        {/* Stat Detail Sheets - only for non-demo */}
+        {!isDemo && (
+          <>
+            <StatDetailSheet
+              open={activeStatSheet === 'sessions'}
+              onOpenChange={(open) => !open && setActiveStatSheet(null)}
+              type="sessions"
+              stats={stats}
+            />
+            <StatDetailSheet
+              open={activeStatSheet === 'time'}
+              onOpenChange={(open) => !open && setActiveStatSheet(null)}
+              type="time"
+              stats={stats}
+            />
+            <StatDetailSheet
+              open={activeStatSheet === 'streak'}
+              onOpenChange={(open) => !open && setActiveStatSheet(null)}
+              type="streak"
+              stats={stats}
+            />
+            <StatDetailSheet
+              open={activeStatSheet === 'projects'}
+              onOpenChange={(open) => !open && setActiveStatSheet(null)}
+              type="projects"
+              stats={stats}
+            />
+          </>
+        )}
 
         {/* Achievements Preview */}
         <Sheet>
@@ -381,11 +441,11 @@ export default function Settings() {
                   <span className="font-medium text-foreground">Achievements</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>{unlockedCount}/{totalCount}</span>
+                  <span>{demoUnlockedCount}/{demoTotalCount}</span>
                   <ChevronRight className="w-4 h-4" />
                 </div>
               </div>
-              <Progress value={progressPercentage} className="h-2 mb-3" />
+              <Progress value={demoProgressPercentage} className="h-2 mb-3" />
               
               {recentlyUnlocked.length > 0 ? (
                 <div className="flex items-center gap-2">
@@ -461,7 +521,7 @@ export default function Settings() {
             </div>
           </div>
           
-          {hasChanges && !isEditing && (
+          {hasChanges && !isEditing && !isDemo && (
             <Button onClick={handleSave} disabled={isSaving} className="w-full mt-4">
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Save Preferences
@@ -473,20 +533,40 @@ export default function Settings() {
         <div className="p-4 rounded-2xl bg-card border border-border mb-6">
           <h3 className="font-medium text-foreground mb-4">Account</h3>
           <div className="space-y-2">
-            <button 
-              onClick={() => setShowChangePassword(true)}
-              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-muted transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Lock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-foreground">Change Password</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </button>
+            {!isDemo && (
+              <button 
+                onClick={() => setShowChangePassword(true)}
+                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Lock className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-foreground">Change Password</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
             
             <button 
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <LogOut className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-foreground">{isDemo ? 'Exit Demo' : 'Sign Out'}</span>
+              </div>
+              {isSigningOut && <Loader2 className="w-4 h-4 animate-spin" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Danger Zone - Hidden in Demo */}
+        {!isDemo && (
+          <div className="p-4 rounded-2xl bg-destructive/5 border border-destructive/20">
+            <h3 className="font-medium text-destructive mb-4">Danger Zone</h3>
+            <button 
               onClick={() => setShowDeleteAccount(true)}
-              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-destructive/10 transition-colors group"
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-destructive/10 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <Trash2 className="w-4 h-4 text-destructive" />
@@ -495,38 +575,26 @@ export default function Settings() {
               <ChevronRight className="w-4 h-4 text-destructive" />
             </button>
           </div>
-        </div>
+        )}
 
-        {/* Change Password Modal */}
-        <ChangePasswordModal
-          open={showChangePassword}
-          onOpenChange={setShowChangePassword}
-        />
-
-        {/* Delete Account Dialog */}
-        <DeleteAccountDialog
-          open={showDeleteAccount}
-          onOpenChange={setShowDeleteAccount}
-          userEmail={user?.email || ''}
-          onDeleted={handleAccountDeleted}
-        />
-
-        {/* Sign Out */}
-        <Button
-          variant="ghost"
-          onClick={handleSignOut}
-          disabled={isSigningOut}
-          className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-        >
-          {isSigningOut ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <>
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </>
-          )}
-        </Button>
+        {/* Modals - Only for authenticated users */}
+        {!isDemo && (
+          <>
+            <ChangePasswordModal
+              open={showChangePassword}
+              onOpenChange={setShowChangePassword}
+            />
+            
+            {user && (
+              <DeleteAccountDialog
+                open={showDeleteAccount}
+                onOpenChange={setShowDeleteAccount}
+                userId={user.id}
+                onDeleted={handleAccountDeleted}
+              />
+            )}
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,12 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
 import { ArrowRight, Play, Mic, Send, Square, MessageSquare, Check, Sparkles, FolderOpen, ListChecks, CheckCircle2, Shuffle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { getCategoryById, getCategoryColor } from '@/data/ventures';
 import { formatDistanceToNow } from 'date-fns';
 import { WorkflowHierarchyExplainer, useShowHierarchyExplainer } from './WorkflowHierarchyExplainer';
+import { useDemo } from '@/contexts/DemoContext';
 
 interface Template {
   id: string;
@@ -148,9 +149,14 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
   const [greeting] = useState(getGreeting());
   const [input, setInput] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile } = useAuth();
   const { isRecording, isProcessing, partialText, startRecording, stopRecording, error } = useVoiceRecorder();
   const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer();
+  const demo = useDemo();
+  
+  const isDemo = location.search.includes('demo=1');
+  const demoSuffix = isDemo ? '?demo=1' : '';
 
   // Generate suggestions locally (no AI call)
   const allSuggestions = useMemo(() => {
@@ -188,10 +194,23 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
   };
 
   useEffect(() => {
-    loadRecentTemplates();
-    loadFutureNotes();
-    loadActiveProjects();
-  }, []);
+    if (isDemo && demo) {
+      // Use demo data
+      setRecentTemplates(demo.templates as Template[]);
+      setActiveProjects(demo.projects.map(p => ({
+        id: p.id,
+        name: p.name,
+        venture: p.venture,
+        current_stage: p.current_stage,
+        stages: p.stages,
+      })));
+      setFutureNotes(demo.futureNotes as FutureNote[]);
+    } else {
+      loadRecentTemplates();
+      loadFutureNotes();
+      loadActiveProjects();
+    }
+  }, [isDemo, demo]);
 
   const loadRecentTemplates = async () => {
     const { data } = await supabase
@@ -219,6 +238,12 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
   };
 
   const markNoteAsRead = async (noteId: string) => {
+    if (isDemo && demo) {
+      demo.markNoteAsRead(noteId);
+      setFutureNotes(prev => prev.filter(n => n.id !== noteId));
+      return;
+    }
+    
     await supabase
       .from('future_notes')
       .update({ is_read: true })
@@ -232,10 +257,12 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
   };
 
   const useTemplate = async (template: Template) => {
-    await supabase
-      .from('templates')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('id', template.id);
+    if (!isDemo) {
+      await supabase
+        .from('templates')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('id', template.id);
+    }
 
     const defaultTasks = Array.isArray(template.default_tasks) 
       ? template.default_tasks 
@@ -247,7 +274,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
       completed: false,
     }));
 
-    navigate('/session', {
+    navigate('/session' + demoSuffix, {
       state: {
         venture: template.venture,
         workType: template.work_type,
@@ -262,6 +289,25 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     switch (suggestion.type) {
       case 'project':
         if (suggestion.data.projectId) {
+          // For demo mode, use demo data directly
+          if (isDemo && demo) {
+            const project = demo.projects.find(p => p.id === suggestion.data.projectId);
+            if (project) {
+              const currentStage = project.stages[suggestion.data.stageIndex || project.current_stage];
+              navigate('/session' + demoSuffix, {
+                state: {
+                  venture: project.venture,
+                  workType: currentStage?.work_type || 'Deep Work',
+                  focus: currentStage?.name || project.name,
+                  completionCondition: currentStage?.completion_condition || 'Stage complete',
+                  projectId: project.id,
+                  stageIndex: suggestion.data.stageIndex ?? project.current_stage,
+                }
+              });
+            }
+            return;
+          }
+          
           // Navigate to session with project context
           const { data: project } = await supabase
             .from('projects')
@@ -292,7 +338,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
           const template = recentTemplates.find(t => t.id === suggestion.data.templateId);
           if (template) {
             await useTemplate(template);
-          } else {
+          } else if (!isDemo) {
             // Fetch template if not in recent
             const { data: templateData } = await supabase
               .from('templates')
@@ -307,7 +353,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
         break;
       
       case 'routine':
-        navigate('/session', {
+        navigate('/session' + demoSuffix, {
           state: {
             venture: suggestion.data.venture || 'daily-maintenance',
             workType: suggestion.data.workType || 'Morning Routine',
@@ -320,7 +366,7 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
       case 'session':
       default:
         if (suggestion.label.toLowerCase().includes('yesterday') || suggestion.label.toLowerCase().includes('history')) {
-          navigate('/history');
+          navigate('/history' + demoSuffix);
         } else {
           onStartSession();
         }
@@ -343,12 +389,13 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
     if (input.toLowerCase().includes('session') || input.toLowerCase().includes('work')) {
       onStartSession();
     } else if (input.toLowerCase().includes('yesterday') || input.toLowerCase().includes('history')) {
-      navigate('/history');
+      navigate('/history' + demoSuffix);
     }
     setInput('');
   };
 
-  const firstName = profile?.display_name?.split(' ')[0];
+  const displayName = isDemo && demo ? demo.profile.display_name : profile?.display_name;
+  const firstName = displayName?.split(' ')[0];
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 pb-24 bg-warm-gradient">
@@ -500,96 +547,89 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
               </button>
             )}
           </div>
+        </div>
 
         {/* Smart Suggestions */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-primary" />
-                <span className="text-xs font-medium text-muted-foreground">Smart Suggestions</span>
-              </div>
+        {suggestions.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                Suggestions
+              </h2>
               {allSuggestions.length > 4 && (
                 <button
                   onClick={handleShuffle}
                   className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                   title="Shuffle suggestions"
                 >
-                  <Shuffle className="w-3.5 h-3.5" />
+                  <Shuffle className="w-4 h-4" />
                 </button>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              {suggestions.map((suggestion, idx) => {
-                const getIcon = () => {
-                  switch (suggestion.type) {
-                    case 'project': return <FolderOpen className="w-3.5 h-3.5" />;
-                    case 'template': return <ListChecks className="w-3.5 h-3.5" />;
-                    case 'routine': return <CheckCircle2 className="w-3.5 h-3.5" />;
-                    default: return <Sparkles className="w-3.5 h-3.5" />;
-                  }
-                };
-                
-                const getBg = () => {
-                  switch (suggestion.type) {
-                    case 'project': return 'bg-primary/10 hover:bg-primary/20 border-primary/20';
-                    case 'template': return 'bg-secondary/50 hover:bg-secondary border-border/50';
-                    case 'routine': return 'bg-green-500/10 hover:bg-green-500/20 border-green-500/20';
-                    default: return 'bg-secondary/50 hover:bg-secondary border-border/50';
-                  }
-                };
-                
-                return (
-                  <button
-                    key={`${suggestion.label}-${idx}`}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className={`group px-3 py-2 rounded-lg text-sm text-foreground transition-all flex items-center gap-1.5 border ${getBg()}`}
-                    title={suggestion.description}
-                  >
-                    <span className="text-primary">{getIcon()}</span>
-                    {suggestion.label}
-                  </button>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-2">
+              {suggestions.map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className="p-3 rounded-xl bg-card border border-border hover:border-primary/30 hover:bg-secondary/50 transition-all text-left group"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {suggestion.type === 'project' && <FolderOpen className="w-3.5 h-3.5 text-primary" />}
+                    {suggestion.type === 'template' && <ListChecks className="w-3.5 h-3.5 text-muted-foreground" />}
+                    {suggestion.type === 'routine' && <CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground" />}
+                    {suggestion.type === 'session' && <Play className="w-3.5 h-3.5 text-muted-foreground" />}
+                    <span className="text-sm font-medium text-foreground truncate">
+                      {suggestion.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {suggestion.description}
+                  </p>
+                </button>
+              ))}
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Start Session CTA */}
+        {/* Main CTA - Start Session */}
         <button
           onClick={onStartSession}
-          className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-3 group mb-6"
+          className="w-full btn-primary py-4 text-lg font-medium flex items-center justify-center gap-3 group"
         >
+          <Play className="w-5 h-5" />
           Start a Work Session
           <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
         </button>
 
         {/* Quick Start Templates */}
         {recentTemplates.length > 0 && (
-          <div>
+          <div className="mt-6">
             <h2 className="text-sm font-medium text-muted-foreground mb-3 px-1">
               Quick Start
             </h2>
             <div className="space-y-2">
-              {recentTemplates.map((template) => (
-                <button
-                  key={template.id}
-                  onClick={() => useTemplate(template)}
-                  className="w-full p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors text-left flex items-center gap-3"
-                >
-                  <div className={`w-10 h-10 rounded-xl ${getVentureColor(template.venture)} flex items-center justify-center`}>
-                    <Play className="w-4 h-4 text-white fill-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-foreground truncate">
-                      {template.name}
+              {recentTemplates.slice(0, 3).map((template) => {
+                const catColor = getCategoryColor(template.venture);
+                
+                return (
+                  <button
+                    key={template.id}
+                    onClick={() => useTemplate(template)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border border-l-4 ${catColor.border} hover:bg-secondary/50 transition-all group`}
+                  >
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="font-medium text-foreground truncate">
+                        {template.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {template.work_type}
+                      </div>
                     </div>
-                    <div className="text-sm text-muted-foreground truncate">
-                      {template.venture} • {template.work_type}
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                </button>
-              ))}
+                    <Play className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
