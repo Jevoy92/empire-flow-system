@@ -4,9 +4,7 @@ import { WorkSession } from '@/components/WorkSession';
 import { SystemShutdown } from '@/components/SystemShutdown';
 import { supabase } from '@/integrations/supabase/client';
 import { useSession, SessionConfig } from '@/contexts/SessionContext';
-import { useAuth } from '@/hooks/useAuth';
 import { Json } from '@/integrations/supabase/types';
-import { Loader2 } from 'lucide-react';
 
 interface Task {
   id: string;
@@ -22,7 +20,6 @@ interface LocationState extends SessionConfig {
 export default function Session() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, loading: authLoading } = useAuth();
   const [view, setView] = useState<'session' | 'shutdown'>('session');
   const [sessionTasks, setSessionTasks] = useState<Task[]>([]);
   
@@ -41,13 +38,6 @@ export default function Session() {
     abortSession,
     restoreSession,
   } = useSession();
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate('/auth');
-    }
-  }, [isAuthenticated, authLoading, navigate]);
 
   // Initialize session from location state or restore from context
   useEffect(() => {
@@ -215,18 +205,7 @@ export default function Session() {
       }]);
   };
 
-  // Show loading while checking auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
+  // Auth check handled by ProtectedRoute
 
   if (!sessionConfig || !startTime) {
     return null;

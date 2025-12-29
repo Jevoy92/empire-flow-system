@@ -79,11 +79,7 @@ export default function Settings() {
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      navigate('/auth');
-    }
-  }, [isAuthenticated, loading, navigate]);
+  // Auth check removed - handled by ProtectedRoute
 
   useEffect(() => {
     if (profile) {

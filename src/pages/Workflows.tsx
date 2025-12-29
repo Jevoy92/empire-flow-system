@@ -92,12 +92,7 @@ export default function Workflows() {
   const [visibleTabs, setVisibleTabs] = useState<TabType[]>(['personal', 'projects', 'business']);
   const [activeTab, setActiveTab] = useState<TabType>('personal');
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate('/auth');
-    }
-  }, [isAuthenticated, authLoading, navigate]);
+  // Auth check handled by ProtectedRoute
 
   useEffect(() => {
     const init = async () => {
