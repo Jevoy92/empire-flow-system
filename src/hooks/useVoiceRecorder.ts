@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { pipeline, AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
+import { pipeline } from '@huggingface/transformers';
+import type { AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
 
 interface UseVoiceRecorderReturn {
   isRecording: boolean;
@@ -21,23 +22,33 @@ async function getTranscriber(): Promise<AutomaticSpeechRecognitionPipeline> {
   
   if (modelLoadPromise) return modelLoadPromise;
   
+  console.log('Loading Whisper model...');
   isLoadingModel = true;
-  modelLoadPromise = pipeline(
-    'automatic-speech-recognition',
-    'onnx-community/whisper-tiny.en',
-    { device: 'webgpu' }
-  ).catch((err) => {
-    // Fallback to CPU if WebGPU not available
-    console.log('WebGPU not available, falling back to CPU');
-    return pipeline(
-      'automatic-speech-recognition',
-      'onnx-community/whisper-tiny.en'
-    );
-  }).then((p) => {
-    transcriber = p as AutomaticSpeechRecognitionPipeline;
-    isLoadingModel = false;
-    return transcriber;
-  });
+  
+  modelLoadPromise = (async () => {
+    try {
+      // Try WebGPU first
+      const p = await pipeline(
+        'automatic-speech-recognition',
+        'onnx-community/whisper-tiny.en',
+        { device: 'webgpu' }
+      );
+      console.log('Whisper model loaded with WebGPU');
+      transcriber = p as AutomaticSpeechRecognitionPipeline;
+      isLoadingModel = false;
+      return transcriber;
+    } catch (err) {
+      console.log('WebGPU not available, falling back to CPU:', err);
+      const p = await pipeline(
+        'automatic-speech-recognition',
+        'onnx-community/whisper-tiny.en'
+      );
+      console.log('Whisper model loaded with CPU');
+      transcriber = p as AutomaticSpeechRecognitionPipeline;
+      isLoadingModel = false;
+      return transcriber;
+    }
+  })();
   
   return modelLoadPromise;
 }
@@ -87,17 +98,21 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
   };
 
   const startRecording = useCallback(async () => {
+    console.log('startRecording called');
     try {
       setError(null);
       setPartialText('');
       accumulatedTextRef.current = '';
       
       // Ensure model is loaded before starting
+      console.log('Loading model...');
       setIsModelLoading(true);
       await getTranscriber();
       setIsModelLoading(false);
+      console.log('Model loaded, requesting mic access...');
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('Mic access granted');
       
       // Use audio/webm for recording
       const mediaRecorder = new MediaRecorder(stream, {
@@ -115,11 +130,12 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
 
       mediaRecorder.start();
       setIsRecording(true);
+      console.log('Recording started');
       
     } catch (err) {
       console.error('Failed to start recording:', err);
       setIsModelLoading(false);
-      setError('Microphone access denied. Please allow access in your browser settings.');
+      setError(err instanceof Error ? err.message : 'Microphone access denied. Please allow access in your browser settings.');
     }
   }, []);
 
