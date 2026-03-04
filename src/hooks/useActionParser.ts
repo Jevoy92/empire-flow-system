@@ -125,7 +125,7 @@ export function useActionParser(handlers: SessionAssistantActionHandlers) {
             break;
           case 'add_task_tree':
             if (action.tasks.length > 0) {
-              handlers.onAddTaskTree(action.tasks);
+              handlers.onAddTaskTree(action.tasks as { text: string; subtasks?: string[] }[]);
               actionsExecuted += 1;
             }
             break;
