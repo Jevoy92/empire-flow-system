@@ -1,19 +1,14 @@
 import { useState } from 'react';
-import { Play } from 'lucide-react';
+import { Play, ArrowRight, Mic, Send, Square } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { WorkflowHierarchyExplainer, useShowHierarchyExplainer } from './WorkflowHierarchyExplainer';
 import { useDemo } from '@/contexts/DemoContext';
-import { DailyDigest } from './DailyDigest';
 import { buildWorkflowDraftFromInput, buildWorkflowDraftFromTemplate } from '@/lib/workflow-planner';
 import { motion, useReducedMotion } from 'framer-motion';
-import { HomeAIWorkspacePanel } from './home/HomeAIWorkspacePanel';
-import { HomeIntelligenceFeed } from './home/HomeIntelligenceFeed';
-import { HomeMobileAIWorkspacePanel } from './home/HomeMobileAIWorkspacePanel';
-import { HomeMobileIntelligenceFeed } from './home/HomeMobileIntelligenceFeed';
-import { HomeProjectSidebar } from './home/HomeProjectSidebar';
+import { HomeSuggestionCards } from './home/HomeSuggestionCards';
 import { ProjectStageData, SmartSuggestion, Template } from './home/types';
 import { useHomeData } from '@/hooks/useHomeData';
 
@@ -32,7 +27,6 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
   const [greeting] = useState(getGreeting());
   const [input, setInput] = useState('');
   const navigate = useNavigate();
-  const location = useLocation();
   const { profile, user } = useAuth();
   const { isRecording, isProcessing, partialText, startRecording, stopRecording, error, isModelLoading, engine } = useVoiceRecorder();
   const demo = useDemo();
@@ -40,21 +34,14 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
   const {
     recentTemplates,
     activeProjects,
-    futureNotes,
     suggestions,
     allSuggestions,
-    isNewUserEmpty,
     isDemo,
     handleShuffle,
-    markNoteAsRead,
   } = useHomeData();
 
   const demoSuffix = isDemo ? '?demo=1' : '';
   const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer(isDemo ? 'demo' : user?.id);
-
-  const dismissNote = async (noteId: string) => {
-    await markNoteAsRead(noteId);
-  };
 
   const startFromTemplate = async (template: Template) => {
     if (!isDemo) {
@@ -63,7 +50,6 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
         .update({ last_used_at: new Date().toISOString() })
         .eq('id', template.id);
     }
-
     const draft = buildWorkflowDraftFromTemplate(template);
     navigate('/workflow-review' + demoSuffix, {
       state: { draft, source: 'template', templateId: template.id },
@@ -101,7 +87,6 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
           if (project) {
             const stages = Array.isArray(project.stages) ? project.stages : [];
             const currentStage = stages[suggestion.data.stageIndex || project.current_stage] as ProjectStageData | undefined;
-
             navigate('/session', {
               state: {
                 venture: project.venture,
@@ -204,124 +189,105 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
         };
 
   return (
-    <motion.div className="min-h-screen page-shell bg-warm-gradient px-4 py-6 md:px-6" {...reveal()}>
-      <motion.div className="mx-auto w-full max-w-7xl" {...reveal(0.04)}>
-        <WorkflowHierarchyExplainer isOpen={showHierarchyExplainer} onDismiss={dismissHierarchyExplainer} />
+    <motion.div className="min-h-[calc(100dvh-4rem)] page-shell flex flex-col items-center justify-center px-4 py-12 md:py-16" {...reveal()}>
+      <WorkflowHierarchyExplainer isOpen={showHierarchyExplainer} onDismiss={dismissHierarchyExplainer} />
 
-        <motion.div className="hidden xl:block space-y-5" {...reveal(0.08)}>
-          <motion.div className="card-elevated border border-border/70 p-5" {...reveal(0.12)}>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-semibold text-foreground tracking-tight">
-                  {greeting}{firstName ? `, ${firstName}` : ''}.
-                </h1>
-                <p className="text-muted-foreground mt-1">Build momentum from one command deck.</p>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">{activeProjects.length} active projects</span>
-                <span className="px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">{recentTemplates.length} quick starts</span>
-                <span className="px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">{futureNotes.length} notes</span>
-              </div>
-            </div>
-          </motion.div>
-
-          {isNewUserEmpty ? (
-            <motion.div className="card-elevated border border-border/70 p-10 text-center" {...reveal(0.16)}>
-              <p className="text-2xl font-semibold text-foreground">Ready to start your first focused session?</p>
-              <p className="text-sm text-muted-foreground mt-2 max-w-xl mx-auto">
-                We'll generate a workflow from your voice or typed prompt, then you can approve it before starting the timer.
-              </p>
-              <div className="mt-6 flex items-center justify-center gap-3">
-                <button onClick={onStartSession} className="btn-primary py-3 px-5 flex items-center gap-2">
-                  <Play className="w-4 h-4" />
-                  Start your first session
-                </button>
-                <button onClick={() => navigate('/workflows' + demoSuffix)} className="btn-secondary py-3 px-5">
-                  Open workflow library
-                </button>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div className="card-elevated border border-border/70 p-4" {...reveal(0.16)}>
-              <div className="grid grid-cols-12 gap-4">
-                <HomeIntelligenceFeed notes={futureNotes} onDismissNote={dismissNote} />
-                <HomeAIWorkspacePanel
-                  input={input}
-                  onInputChange={setInput}
-                  onSend={handleSend}
-                  onStartSession={onStartSession}
-                  isRecording={isRecording}
-                  isProcessing={isProcessing}
-                  isModelLoading={isModelLoading}
-                  engine={engine}
-                  partialText={partialText}
-                  error={error}
-                  onMicPress={handleMicPress}
-                  suggestions={suggestions}
-                  allSuggestionCount={allSuggestions.length}
-                  onSuggestionClick={handleSuggestionClick}
-                  onShuffle={handleShuffle}
-                />
-                <HomeProjectSidebar
-                  activeProjects={activeProjects}
-                  recentTemplates={recentTemplates}
-                  futureNotesCount={futureNotes.length}
-                  onSuggestionClick={handleSuggestionClick}
-                  onStartFromTemplate={startFromTemplate}
-                />
-              </div>
-            </motion.div>
-          )}
+      <div className="w-full max-w-2xl mx-auto flex flex-col items-center">
+        {/* Greeting */}
+        <motion.div className="text-center mb-10" {...reveal(0.06)}>
+          <h1 className="text-3xl md:text-4xl font-semibold text-foreground tracking-tight">
+            {greeting}{firstName ? `, ${firstName}` : ''}.
+          </h1>
+          <p className="text-muted-foreground mt-2 text-lg">What's on your mind?</p>
         </motion.div>
 
-        <motion.div className="xl:hidden w-full max-w-md mx-auto" {...reveal(0.08)}>
-          {isNewUserEmpty && (
-            <div className="mb-6 card-elevated border border-border/70 p-5 text-center">
-              <p className="text-lg font-semibold text-foreground">Start your first session</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Tell AI what you want to accomplish and approve the generated workflow.
-              </p>
-              <div className="mt-4 flex flex-col gap-2">
-                <button onClick={onStartSession} className="btn-primary w-full py-3 flex items-center justify-center gap-2">
-                  <Play className="w-4 h-4" />
-                  Start Session
-                </button>
-                <button onClick={() => navigate('/workflows' + demoSuffix)} className="btn-secondary w-full py-2.5">
-                  Open workflow library
-                </button>
-              </div>
+        {/* Mic button */}
+        <motion.div className="flex flex-col items-center mb-10" {...reveal(0.12)}>
+          <button
+            onClick={handleMicPress}
+            disabled={isProcessing || isModelLoading}
+            className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all ${(isProcessing || isModelLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {!isRecording && !isProcessing && (
+              <>
+                <div className="absolute inset-0 rounded-full bg-primary/10 animate-ripple" />
+                <div className="absolute inset-2 rounded-full bg-primary/20 animate-breathe" />
+              </>
+            )}
+            {isRecording && (
+              <>
+                <div className="absolute inset-0 rounded-full bg-destructive/20 animate-ping" />
+                <div className="absolute inset-2 rounded-full bg-destructive/30 animate-pulse" />
+              </>
+            )}
+            <div className={`relative w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${isRecording ? 'bg-destructive' : 'bg-primary hover:brightness-110'}`}>
+              {isRecording ? (
+                <Square className="w-5 h-5 text-destructive-foreground" />
+              ) : (
+                <Mic className="w-6 h-6 text-primary-foreground" />
+              )}
             </div>
-          )}
+          </button>
 
-          {!isNewUserEmpty && (
-            <>
-              <HomeMobileAIWorkspacePanel
-                input={input}
-                onInputChange={setInput}
-                onSend={handleSend}
-                onStartSession={onStartSession}
-                isRecording={isRecording}
-                isProcessing={isProcessing}
-                isModelLoading={isModelLoading}
-                engine={engine}
-                partialText={partialText}
-                error={error}
-                onMicPress={handleMicPress}
-                suggestions={suggestions}
-                allSuggestionCount={allSuggestions.length}
-                onSuggestionClick={handleSuggestionClick}
-                onShuffle={handleShuffle}
-                greeting={greeting}
-                firstName={firstName}
-              />
-
-              <HomeMobileIntelligenceFeed notes={futureNotes} onDismissNote={dismissNote} />
-            </>
-          )}
-
-          <DailyDigest />
+          <p className="mt-3 text-sm text-muted-foreground">
+            {isModelLoading && `Loading ${engine === 'server' ? 'transcription engine' : 'voice engine'}...`}
+            {isRecording && (
+              <span className="flex items-center gap-2 text-destructive">
+                <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                {partialText ? 'Listening… tap to finish' : 'Listening… speak now'}
+              </span>
+            )}
+            {isProcessing && 'Finalizing...'}
+            {!isRecording && !isProcessing && !isModelLoading && 'Tap to talk'}
+          </p>
+          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
         </motion.div>
-      </motion.div>
+
+        {/* Text input */}
+        <motion.div className="w-full mb-8" {...reveal(0.18)}>
+          <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Tell AI what to plan…"
+              className="flex-1 px-4 py-3 rounded-xl bg-transparent text-base focus:outline-none placeholder:text-muted-foreground"
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            />
+            {input.trim() && (
+              <button
+                onClick={handleSend}
+                className="p-3 rounded-xl bg-primary text-primary-foreground hover:brightness-105 transition-all"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Suggestion cards */}
+        <motion.div className="w-full mb-8" {...reveal(0.24)}>
+          <HomeSuggestionCards
+            suggestions={suggestions}
+            allSuggestionCount={allSuggestions.length}
+            title="Suggested starts"
+            onSuggestionClick={handleSuggestionClick}
+            onShuffle={handleShuffle}
+          />
+        </motion.div>
+
+        {/* Start session CTA */}
+        <motion.div className="w-full" {...reveal(0.3)}>
+          <button
+            onClick={onStartSession}
+            className="w-full btn-primary py-4 text-lg font-medium flex items-center justify-center gap-3 group"
+          >
+            <Play className="w-5 h-5" />
+            Start a Work Session
+            <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+          </button>
+        </motion.div>
+      </div>
     </motion.div>
   );
 }
