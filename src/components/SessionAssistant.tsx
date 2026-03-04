@@ -203,7 +203,7 @@ export function SessionAssistant({
             break;
           case 'add_task_tree':
             if (action.tasks && action.tasks.length > 0) {
-              onAddTaskTree(action.tasks);
+              onAddTaskTree(action.tasks as { text: string; subtasks?: string[] }[]);
               actionsExecuted += 1;
             }
             break;
