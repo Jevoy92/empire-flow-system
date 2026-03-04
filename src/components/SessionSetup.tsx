@@ -19,7 +19,6 @@ const setupChecklist = [
   { id: 2, label: 'Required software is open' },
   { id: 3, label: 'Assets are accessible' },
   { id: 4, label: 'Notifications are silenced' },
-  { id: 5, label: 'Timer is set' },
 ];
 
 export function SessionSetup({ onLaunch, onCancel }: SessionSetupProps) {
