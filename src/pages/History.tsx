@@ -5,6 +5,7 @@ import { Clock, CheckCircle, XCircle, Play, Eye, Circle, Timer, ListChecks, Rota
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDemo } from '@/contexts/DemoContext';
 import { useSession } from '@/contexts/SessionContext';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   Dialog,
   DialogContent,
@@ -169,6 +170,7 @@ export default function History() {
   const location = useLocation();
   const demo = useDemo();
   const { isActive, restoreSession } = useSession();
+  const prefersReducedMotion = useReducedMotion();
   
   const isDemo = location.search.includes('demo=1');
   const demoSuffix = isDemo ? '?demo=1' : '';
@@ -347,6 +349,15 @@ export default function History() {
     setSelectedSession(session);
   };
 
+  const reveal = (delay = 0) =>
+    prefersReducedMotion
+      ? { initial: false, animate: { opacity: 1 } }
+      : {
+          initial: { opacity: 0, y: 14 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.26, delay, ease: [0.22, 1, 0.36, 1] as const },
+        };
+
   if (loading) {
     return (
       <div className="min-h-screen pb-24 md:pb-10 p-6">
@@ -359,21 +370,23 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-screen pb-24 md:pb-10 p-6 animate-fade-in bg-background">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl font-semibold mb-6">History</h1>
+    <motion.div className="min-h-screen pb-24 md:pb-10 p-6 bg-background" {...reveal()}>
+      <motion.div className="max-w-6xl mx-auto" {...reveal(0.04)}>
+        <motion.h1 className="text-2xl font-semibold mb-6" {...reveal(0.08)}>
+          History
+        </motion.h1>
 
         {sessions.length === 0 ? (
-          <div className="card-elevated p-8 text-center">
+          <motion.div className="card-elevated p-8 text-center" {...reveal(0.12)}>
             <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">No sessions yet.</p>
             <p className="text-sm text-muted-foreground mt-1">
               Complete a work session to see it here.
             </p>
-          </div>
+          </motion.div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            <div className="xl:col-span-7 space-y-5">
+          <motion.div className="grid grid-cols-1 xl:grid-cols-12 gap-6" {...reveal(0.12)}>
+            <motion.div className="xl:col-span-7 space-y-5" {...reveal(0.16)}>
               {groupedSessions.map(([dateKey, daySessions]) => (
                 <div key={dateKey} className="card-elevated p-4 border border-border/80">
                   <div className="flex items-center gap-3 mb-3">
@@ -469,9 +482,9 @@ export default function History() {
                   </div>
                 </div>
               ))}
-            </div>
+            </motion.div>
 
-            <aside className="hidden xl:block xl:col-span-5">
+            <motion.aside className="hidden xl:block xl:col-span-5" {...reveal(0.2)}>
               <div className="sticky top-24 card-elevated p-4 border border-border/80">
                 {desktopSession ? (
                   <>
@@ -581,10 +594,10 @@ export default function History() {
                   <div className="text-sm text-muted-foreground">Select a session to view details.</div>
                 )}
               </div>
-            </aside>
-          </div>
+            </motion.aside>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
       <Dialog open={!isDesktop && Boolean(selectedSession)} onOpenChange={(open) => !open && setSelectedSession(null)}>
         <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
@@ -701,6 +714,6 @@ export default function History() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }

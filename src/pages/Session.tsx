@@ -5,6 +5,7 @@ import { SystemShutdown } from '@/components/SystemShutdown';
 import { supabase } from '@/integrations/supabase/client';
 import { useSession, SessionConfig, Task as SessionTask } from '@/contexts/SessionContext';
 import { Json, TablesInsert } from '@/integrations/supabase/types';
+import { AnimatePresence, motion } from 'framer-motion';
 
 type Task = SessionTask;
 
@@ -218,39 +219,56 @@ export default function Session() {
 
   return (
     <div className="min-h-screen bg-background">
-      {view === 'session' && (
-        <div className="min-h-screen flex items-center justify-center p-8">
-            <WorkSession
-              venture={sessionConfig.venture}
-              workType={sessionConfig.workType}
-              focus={sessionConfig.focus}
-              completionCondition={sessionConfig.completionCondition}
-              initialTasks={tasks.length > 0 ? tasks : sessionConfig.initialTasks}
-              startTime={startTime}
-              onComplete={handleSessionComplete}
-              onAbort={handleAbort}
-              onTasksChange={handleTasksChange}
-            />
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        {view === 'session' && (
+          <motion.div
+            key="work-session"
+            className="min-h-screen flex items-center justify-center p-8"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          >
+              <WorkSession
+                venture={sessionConfig.venture}
+                workType={sessionConfig.workType}
+                focus={sessionConfig.focus}
+                completionCondition={sessionConfig.completionCondition}
+                initialTasks={tasks.length > 0 ? tasks : sessionConfig.initialTasks}
+                startTime={startTime}
+                onComplete={handleSessionComplete}
+                onAbort={handleAbort}
+                onTasksChange={handleTasksChange}
+              />
+          </motion.div>
+        )}
 
-      {view === 'shutdown' && (
-        <SystemShutdown
-          onComplete={handleShutdownComplete}
-          onPlanNext={handlePlanNext}
-          onSaveAsTemplate={handleSaveAsTemplate}
-          sessionStats={{
-            durationMinutes: Math.round((new Date().getTime() - startTime.getTime()) / 60000),
-            tasksCompleted: sessionTasks.filter(t => t.completed).length,
-            totalTasks: sessionTasks.length,
-          }}
-          sessionContext={{
-            categoryId: sessionConfig.venture,
-            workType: sessionConfig.workType,
-            sessionId: sessionId || undefined,
-          }}
-        />
-      )}
+        {view === 'shutdown' && (
+          <motion.div
+            key="session-shutdown"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <SystemShutdown
+              onComplete={handleShutdownComplete}
+              onPlanNext={handlePlanNext}
+              onSaveAsTemplate={handleSaveAsTemplate}
+              sessionStats={{
+                durationMinutes: Math.round((new Date().getTime() - startTime.getTime()) / 60000),
+                tasksCompleted: sessionTasks.filter(t => t.completed).length,
+                totalTasks: sessionTasks.length,
+              }}
+              sessionContext={{
+                categoryId: sessionConfig.venture,
+                workType: sessionConfig.workType,
+                sessionId: sessionId || undefined,
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

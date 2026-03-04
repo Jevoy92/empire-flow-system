@@ -6,6 +6,7 @@ import { LandingPage } from '@/components/LandingPage';
 import { useAuth } from '@/hooks/useAuth';
 import { VentureId, EnergyLevel } from '@/types/empire';
 import { Loader2 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 type AppView = 'home' | 'setup';
 
@@ -81,15 +82,32 @@ const Index = () => {
   if (isAuthenticated || isDemo) {
     return (
       <div className="min-h-screen bg-background">
-        {view === 'home' && (
-          <HomeScreen onStartSession={() => setView('setup')} />
-        )}
+        <AnimatePresence mode="wait">
+          {view === 'home' && (
+            <motion.div
+              key="home-screen"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <HomeScreen onStartSession={() => setView('setup')} />
+            </motion.div>
+          )}
 
-        {view === 'setup' && (
-          <div className="min-h-screen flex items-center justify-center p-8 pb-24">
-            <SessionSetup onLaunch={handleLaunch} onCancel={handleCancel} />
-          </div>
-        )}
+          {view === 'setup' && (
+            <motion.div
+              key="setup-screen"
+              className="min-h-screen flex items-center justify-center p-8 pb-24"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <SessionSetup onLaunch={handleLaunch} onCancel={handleCancel} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }

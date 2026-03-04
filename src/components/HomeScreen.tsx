@@ -10,6 +10,7 @@ import { WorkflowHierarchyExplainer, useShowHierarchyExplainer } from './Workflo
 import { useDemo } from '@/contexts/DemoContext';
 import { DailyDigest } from './DailyDigest';
 import { buildWorkflowDraftFromInput, buildWorkflowDraftFromTemplate } from '@/lib/workflow-planner';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface Template {
   id: string;
@@ -431,10 +432,19 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
 
   const displayName = isDemo && demo ? demo.profile.display_name : profile?.display_name;
   const firstName = displayName?.split(' ')[0];
+  const prefersReducedMotion = useReducedMotion();
+  const reveal = (delay = 0) =>
+    prefersReducedMotion
+      ? { initial: false, animate: { opacity: 1 } }
+      : {
+          initial: { opacity: 0, y: 16 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.28, delay, ease: [0.22, 1, 0.36, 1] as const },
+        };
 
   return (
-    <div className="min-h-screen bg-warm-gradient px-4 py-6 pb-24 md:px-6 md:pb-10">
-      <div className="mx-auto w-full max-w-7xl animate-fade-in">
+    <motion.div className="min-h-screen bg-warm-gradient px-4 py-6 pb-24 md:px-6 md:pb-10" {...reveal()}>
+      <motion.div className="mx-auto w-full max-w-7xl" {...reveal(0.04)}>
 
         {/* Workflow Hierarchy Explainer - Modal for first time users */}
         <WorkflowHierarchyExplainer
@@ -442,8 +452,8 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
           onDismiss={dismissHierarchyExplainer}
         />
 
-        <div className="hidden xl:block space-y-5">
-          <div className="card-elevated border border-border/70 p-5">
+        <motion.div className="hidden xl:block space-y-5" {...reveal(0.08)}>
+          <motion.div className="card-elevated border border-border/70 p-5" {...reveal(0.12)}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-semibold text-foreground tracking-tight">
@@ -457,9 +467,9 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
                 <span className="px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">{futureNotes.length} notes</span>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="card-elevated border border-border/70 p-4">
+          <motion.div className="card-elevated border border-border/70 p-4" {...reveal(0.16)}>
             <div className="grid grid-cols-12 gap-4">
               <aside className="col-span-3 rounded-2xl border border-border/70 bg-card/40 p-4 space-y-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -692,10 +702,10 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
                 </div>
               </aside>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        <div className="xl:hidden w-full max-w-md mx-auto">
+        <motion.div className="xl:hidden w-full max-w-md mx-auto" {...reveal(0.08)}>
           {/* Notes from Past You */}
           {futureNotes.length > 0 && (
             <div className="mb-6 space-y-3 animate-fade-in">
@@ -919,8 +929,8 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
               </div>
             </div>
           )}
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 }

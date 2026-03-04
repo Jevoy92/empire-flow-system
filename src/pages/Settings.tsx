@@ -30,6 +30,7 @@ import { AvatarPicker } from '@/components/AvatarPicker';
 import { ChangePasswordModal } from '@/components/ChangePasswordModal';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 import { useDemo } from '@/contexts/DemoContext';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -67,6 +68,7 @@ export default function Settings() {
   const location = useLocation();
   const { theme: currentTheme, setTheme: setAppTheme } = useTheme();
   const demo = useDemo();
+  const prefersReducedMotion = useReducedMotion();
   
   const isDemo = location.search.includes('demo=1');
   const demoSuffix = isDemo ? '?demo=1' : '';
@@ -256,12 +258,20 @@ export default function Settings() {
     displayName !== (profile?.display_name || '') ||
     theme !== (settings?.theme || 'system') ||
     sessionDuration !== (settings?.default_session_duration || 25);
+  const reveal = (delay = 0) =>
+    prefersReducedMotion
+      ? { initial: false, animate: { opacity: 1 } }
+      : {
+          initial: { opacity: 0, y: 14 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.26, delay, ease: [0.22, 1, 0.36, 1] as const },
+        };
 
   return (
-    <div className="min-h-dvh bg-background px-4 py-6 pb-24 md:px-6 md:pb-10">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <motion.div className="min-h-dvh bg-background px-4 py-6 pb-24 md:px-6 md:pb-10" {...reveal()}>
+      <motion.div className="max-w-7xl mx-auto space-y-6" {...reveal(0.04)}>
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <motion.div className="flex items-center gap-4" {...reveal(0.08)}>
           <button
             onClick={() => navigate('/' + demoSuffix)}
             className="p-2 rounded-lg hover:bg-muted transition-colors"
@@ -272,10 +282,10 @@ export default function Settings() {
             <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
             <p className="text-sm text-muted-foreground mt-1">Profile, preferences, and account controls.</p>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          <div className="xl:col-span-7 space-y-6">
+        <motion.div className="grid grid-cols-1 xl:grid-cols-12 gap-6" {...reveal(0.12)}>
+          <motion.div className="xl:col-span-7 space-y-6" {...reveal(0.16)}>
             {/* Demo Mode Banner */}
             {isDemo && (
               <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
@@ -450,9 +460,9 @@ export default function Settings() {
                 </div>
               </SheetContent>
             </Sheet>
-          </div>
+          </motion.div>
 
-          <div className="xl:col-span-5 xl:sticky xl:top-24 h-fit space-y-6">
+          <motion.div className="xl:col-span-5 xl:sticky xl:top-24 h-fit space-y-6" {...reveal(0.2)}>
             {/* Preferences */}
             <div className="p-4 rounded-2xl bg-card border border-border">
               <h3 className="font-medium text-foreground mb-4">Preferences</h3>
@@ -553,8 +563,8 @@ export default function Settings() {
                 </button>
               </div>
             )}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Stat Detail Sheets - only for non-demo */}
         {!isDemo && (
@@ -604,7 +614,7 @@ export default function Settings() {
             )}
           </>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

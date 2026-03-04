@@ -9,6 +9,7 @@ import { getCategoryById, getCategoryColor } from '@/data/ventures';
 import { useAuth } from '@/hooks/useAuth';
 import { useDemo } from '@/contexts/DemoContext';
 import { buildWorkflowDraftFromTemplate, countDraftTasks } from '@/lib/workflow-planner';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface Template {
   id: string;
@@ -86,6 +87,7 @@ export default function Workflows() {
   const [projectTemplates, setProjectTemplates] = useState<ProjectTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showProjectModal, setShowProjectModal] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   const loadTemplates = async () => {
     const { data, error } = await supabase
@@ -234,6 +236,15 @@ export default function Workflows() {
     });
   };
 
+  const reveal = (delay = 0) =>
+    prefersReducedMotion
+      ? { initial: false, animate: { opacity: 1 } }
+      : {
+          initial: { opacity: 0, y: 16 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.28, delay, ease: [0.22, 1, 0.36, 1] as const },
+        };
+
   if (authLoading && !isDemo) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -262,9 +273,9 @@ export default function Workflows() {
   }
 
   return (
-    <div className="min-h-screen pb-24 md:pb-10 p-6 animate-fade-in">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+    <motion.div className="min-h-screen pb-24 md:pb-10 p-6" {...reveal()}>
+      <motion.div className="max-w-7xl mx-auto space-y-6" {...reveal(0.04)}>
+        <motion.div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between" {...reveal(0.08)}>
           <div>
             <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
               <Layers className="w-6 h-6" />
@@ -276,11 +287,11 @@ export default function Workflows() {
             <Plus className="w-4 h-4" />
             New Multi-Workflow
           </button>
-        </div>
+        </motion.div>
 
         <WorkflowHierarchyExplainer isOpen={showHierarchyExplainer} onDismiss={dismissHierarchyExplainer} />
 
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <motion.div className="grid grid-cols-2 xl:grid-cols-4 gap-3" {...reveal(0.12)}>
           <div className="card-elevated p-3 border border-border/70">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Active Workflows</p>
             <p className="text-2xl font-semibold text-foreground mt-1">{workflowStats.activeCount}</p>
@@ -297,9 +308,9 @@ export default function Workflows() {
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Converted Tasks</p>
             <p className="text-2xl font-semibold text-foreground mt-1">{workflowStats.convertedTasks}</p>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <motion.div className="grid grid-cols-1 xl:grid-cols-12 gap-6" {...reveal(0.16)}>
           <div className="xl:col-span-7 space-y-6">
             <div className="card-elevated p-4 border border-border/70">
               <div className="flex items-start gap-3">
@@ -416,7 +427,7 @@ export default function Workflows() {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
 
         <ProjectCreateModal
           isOpen={showProjectModal}
@@ -427,7 +438,7 @@ export default function Workflows() {
           }}
           templates={projectTemplates}
         />
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

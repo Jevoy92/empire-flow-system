@@ -8,6 +8,7 @@ import { CircularProgress } from './CircularProgress';
 import { SessionAssistant } from './SessionAssistant';
 import { useToast } from '@/hooks/use-toast';
 import { useSession } from '@/contexts/SessionContext';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export interface Task {
   id: string;
@@ -134,6 +135,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   const [newTaskText, setNewTaskText] = useState('');
   const [showAddTask, setShowAddTask] = useState(false);
   const [showCompletedTasks, setShowCompletedTasks] = useState(false);
+  const [isMinimizing, setIsMinimizing] = useState(false);
 
   // Fetch total time for this venture
   useEffect(() => {
@@ -616,8 +618,13 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   };
 
   const handleMinimize = () => {
-    minimizeSession();
-    navigate('/');
+    if (isMinimizing) return;
+    setIsMinimizing(true);
+
+    window.setTimeout(() => {
+      minimizeSession();
+      navigate('/');
+    }, 240);
   };
 
   const getCategoryColor = () => {
@@ -766,26 +773,55 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   );
 
   return (
-    <div className="w-full max-w-lg mx-auto px-4 py-5 animate-fade-in">
+    <motion.div
+      className="w-full max-w-lg mx-auto px-4 py-5"
+      style={{ transformOrigin: 'bottom right' }}
+      initial={{ opacity: 0, y: 18, scale: 0.98 }}
+      animate={
+        isMinimizing
+          ? { opacity: 0, x: 260, y: 210, scale: 0.82, filter: 'blur(4px)' }
+          : { opacity: 1, x: 0, y: 0, scale: 1, filter: 'blur(0px)' }
+      }
+      transition={{ type: 'spring', stiffness: 280, damping: 28, mass: 0.85 }}
+    >
       {/* Minimize Button */}
-      <div className="flex justify-end mb-2">
-        <button
+      <motion.div
+        className="flex justify-end mb-2"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.24, delay: 0.04 }}
+      >
+        <motion.button
           onClick={handleMinimize}
           className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Minimize session"
+          whileHover={{ scale: 1.04, rotate: -4 }}
+          whileTap={{ scale: 0.95 }}
+          animate={isMinimizing ? { rotate: -18 } : { rotate: 0 }}
+          transition={{ type: 'spring', stiffness: 280, damping: 22 }}
         >
           <Minimize2 className="w-5 h-5" />
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* Task Context Card */}
-      <div className="card-elevated p-4 mb-6 border border-border/70">
+      <motion.div
+        layoutId="active-session-pill"
+        className="card-elevated p-4 mb-6 border border-border/70"
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, delay: 0.06 }}
+      >
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl ${getCategoryColor()} flex items-center justify-center`}>
+          <motion.div
+            className={`w-10 h-10 rounded-xl ${getCategoryColor()} flex items-center justify-center`}
+            animate={isPaused ? undefined : { scale: [1, 1.05, 1] }}
+            transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+          >
             <span className="text-white text-lg font-semibold">
               {(ventureLabel || 'W')[0]}
             </span>
-          </div>
+          </motion.div>
           <div className="flex-1 min-w-0">
             <div className="text-sm text-foreground/70">
               {ventureLabel} • {workType}
@@ -799,10 +835,15 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Circular Timer */}
-      <div className="flex flex-col items-center mb-6">
+      <motion.div
+        className="flex flex-col items-center mb-6"
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, delay: 0.1 }}
+      >
         <CircularProgress progress={progress} size={220} strokeWidth={10}>
           <span className="text-5xl font-light text-foreground font-mono tracking-tight">
             {formatTime(elapsedSeconds)}
@@ -815,37 +856,55 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
         <p className="text-foreground/70 text-sm mt-4">
           {isPaused ? 'Paused' : 'Stay focused • You got this'}
         </p>
-      </div>
+      </motion.div>
 
       {/* Control Buttons */}
-      <div className="flex items-center justify-center gap-6 mb-6">
-        <button
+      <motion.div
+        className="flex items-center justify-center gap-6 mb-6"
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, delay: 0.14 }}
+      >
+        <motion.button
           onClick={onAbort}
           className="w-14 h-14 rounded-full border-2 border-border flex items-center justify-center text-muted-foreground hover:border-destructive hover:text-destructive transition-colors"
           aria-label="Reset session"
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.95 }}
         >
           <RotateCcw className="w-5 h-5" />
-        </button>
+        </motion.button>
         
-        <button
+        <motion.button
           onClick={togglePause}
           className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg hover:brightness-105 transition-all"
           aria-label={isPaused ? 'Resume' : 'Pause'}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.94 }}
+          animate={isPaused ? { scale: [1, 1.02, 1] } : undefined}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
         >
           {isPaused ? <Play className="w-7 h-7 ml-1" /> : <Pause className="w-7 h-7" />}
-        </button>
+        </motion.button>
         
-        <button
+        <motion.button
           onClick={handleComplete}
           className="w-14 h-14 rounded-full border-2 border-border flex items-center justify-center text-muted-foreground hover:border-status-active hover:text-status-active transition-colors"
           aria-label="Complete session"
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.95 }}
         >
           <Square className="w-5 h-5" />
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* Task List */}
-      <div className="card-elevated overflow-hidden border border-border/70">
+      <motion.div
+        className="card-elevated overflow-hidden border border-border/70"
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.18 }}
+      >
         <div className="px-4 py-3 border-b border-border bg-muted/20">
           <div className="flex items-center justify-between">
             <div>
@@ -884,71 +943,105 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
                 <ChevronRight className="w-3.5 h-3.5" />
               )}
             </button>
-            {showCompletedTasks && (
-              <div className="p-3 pt-0 space-y-2">
-                {completedTasks.map((task) => renderTaskRow(task))}
-              </div>
-            )}
+            <AnimatePresence initial={false}>
+              {showCompletedTasks && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.22 }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-3 pt-0 space-y-2">
+                    {completedTasks.map((task) => renderTaskRow(task))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
         {/* Add Task */}
-        {showAddTask ? (
-          <div className="p-3 border-t border-border flex items-center gap-2">
-            <input
-              type="text"
-              value={newTaskText}
-              onChange={(e) => setNewTaskText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Enter task..."
-              className="flex-1 px-3 py-2 rounded-lg bg-secondary text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-              autoFocus
-            />
-            <button onClick={addTask} className="btn-primary px-3 py-2 text-sm">
-              Add
-            </button>
-            <button
-              onClick={() => { setShowAddTask(false); setNewTaskText(''); }}
-              className="p-2 rounded-lg hover:bg-secondary text-foreground/65"
+        <AnimatePresence initial={false} mode="wait">
+          {showAddTask ? (
+            <motion.div
+              key="add-task-input"
+              className="p-3 border-t border-border flex items-center gap-2"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
             >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowAddTask(true)}
-            className="w-full p-3 border-t border-border text-foreground/70 hover:text-foreground hover:bg-secondary/50 transition-colors flex items-center justify-center gap-2 text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Add task
-          </button>
-        )}
-      </div>
+              <input
+                type="text"
+                value={newTaskText}
+                onChange={(e) => setNewTaskText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Enter task..."
+                className="flex-1 px-3 py-2 rounded-lg bg-secondary text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                autoFocus
+              />
+              <button onClick={addTask} className="btn-primary px-3 py-2 text-sm">
+                Add
+              </button>
+              <button
+                onClick={() => { setShowAddTask(false); setNewTaskText(''); }}
+                className="p-2 rounded-lg hover:bg-secondary text-foreground/65"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          ) : (
+            <motion.button
+              key="add-task-trigger"
+              onClick={() => setShowAddTask(true)}
+              className="w-full p-3 border-t border-border text-foreground/70 hover:text-foreground hover:bg-secondary/50 transition-colors flex items-center justify-center gap-2 text-sm"
+              initial={{ opacity: 0.5 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <Plus className="w-4 h-4" />
+              Add task
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       {/* AI Session Assistant */}
-      <SessionAssistant
-        sessionContext={{
-          venture: ventureData?.name || venture,
-          workType,
-          focus,
-          completionCondition,
-          tasks,
-          elapsedMinutes: Math.floor(elapsedSeconds / 60),
-        }}
-        onAddTasks={handleAIAddTasks}
-        onAddTaskTree={handleAIAddTaskTree}
-        onCompleteTasks={handleAICompleteTasks}
-        onRemoveTasks={handleAIRemoveTasks}
-        onUpdateTask={handleAIUpdateTask}
-        onSetTaskTimer={handleAISetTaskTimer}
-        onStartTaskTimers={handleAIStartTaskTimers}
-        onPauseTaskTimers={handleAIPauseTaskTimers}
-      />
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.22 }}
+      >
+        <SessionAssistant
+          sessionContext={{
+            venture: ventureData?.name || venture,
+            workType,
+            focus,
+            completionCondition,
+            tasks,
+            elapsedMinutes: Math.floor(elapsedSeconds / 60),
+          }}
+          onAddTasks={handleAIAddTasks}
+          onAddTaskTree={handleAIAddTaskTree}
+          onCompleteTasks={handleAICompleteTasks}
+          onRemoveTasks={handleAIRemoveTasks}
+          onUpdateTask={handleAIUpdateTask}
+          onSetTaskTimer={handleAISetTaskTimer}
+          onStartTaskTimers={handleAIStartTaskTimers}
+          onPauseTaskTimers={handleAIPauseTaskTimers}
+        />
+      </motion.div>
 
       {/* Completion Condition */}
-      <div className="mt-4 text-center text-xs text-foreground/70">
+      <motion.div
+        className="mt-4 text-center text-xs text-foreground/70"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.24, delay: 0.26 }}
+      >
         Done when: <span className="text-foreground font-medium">{completionCondition}</span>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
