@@ -216,39 +216,39 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
     switch (type) {
       case 'sessions':
         return {
-          icon: <CheckCircle2 className="w-6 h-6 text-emerald-500" />,
+          icon: <CheckCircle2 className="w-6 h-6 text-[hsl(var(--status-active))]" />,
           title: 'Sessions',
-          bgColor: 'bg-emerald-500/10',
+          bgColor: 'bg-[hsl(var(--status-active)/0.14)]',
           heroValue: stats.total_sessions_completed,
           heroLabel: 'Sessions Completed',
-          chartColor: 'hsl(142, 76%, 36%)', // emerald-500
+          chartColor: 'hsl(var(--status-active))',
         };
       case 'time':
         return {
-          icon: <Clock className="w-6 h-6 text-blue-500" />,
+          icon: <Clock className="w-6 h-6 text-primary" />,
           title: 'Time Focused',
-          bgColor: 'bg-blue-500/10',
+          bgColor: 'bg-primary/12',
           heroValue: formatTime(stats.total_minutes_worked),
           heroLabel: 'Total Focus Time',
-          chartColor: 'hsl(217, 91%, 60%)', // blue-500
+          chartColor: 'hsl(var(--primary))',
         };
       case 'streak':
         return {
-          icon: <Flame className="w-6 h-6 text-orange-500" />,
+          icon: <Flame className="w-6 h-6 text-[hsl(var(--status-warning))]" />,
           title: 'Day Streak',
-          bgColor: 'bg-orange-500/10',
+          bgColor: 'bg-[hsl(var(--status-warning)/0.14)]',
           heroValue: stats.current_streak,
           heroLabel: 'Current Streak',
-          chartColor: 'hsl(25, 95%, 53%)', // orange-500
+          chartColor: 'hsl(var(--status-warning))',
         };
       case 'projects':
         return {
-          icon: <FolderKanban className="w-6 h-6 text-violet-500" />,
+          icon: <FolderKanban className="w-6 h-6 text-accent" />,
           title: 'Projects',
-          bgColor: 'bg-violet-500/10',
+          bgColor: 'bg-[hsl(var(--accent)/0.14)]',
           heroValue: stats.projects_completed,
           heroLabel: 'Projects Completed',
-          chartColor: 'hsl(263, 70%, 50%)', // violet-500
+          chartColor: 'hsl(var(--accent))',
         };
     }
   };

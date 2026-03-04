@@ -136,7 +136,7 @@ export default function WorkflowReview() {
   if (!draft) return null;
 
   return (
-    <div className="min-h-screen pb-24 md:pb-10 p-6 animate-fade-in">
+    <div className="min-h-screen page-shell p-6 animate-fade-in">
       <div className="max-w-7xl mx-auto space-y-4">
         <button
           onClick={() => navigate(state?.source === 'template' ? '/workflows' + demoSuffix : '/' + demoSuffix)}

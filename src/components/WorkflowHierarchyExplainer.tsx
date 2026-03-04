@@ -14,7 +14,6 @@ interface WorkflowHierarchyExplainerProps {
 
 export function WorkflowHierarchyExplainer({ isOpen, onDismiss }: WorkflowHierarchyExplainerProps) {
   const handleDismiss = () => {
-    localStorage.setItem('workflow-hierarchy-dismissed', 'true');
     onDismiss();
   };
 
@@ -96,7 +95,7 @@ export function WorkflowHierarchyExplainer({ isOpen, onDismiss }: WorkflowHierar
         {/* Tip */}
         <div className="pt-2 border-t border-border/50">
           <p className="text-xs text-muted-foreground">
-            💡 <strong>Tip:</strong> Single-stage workflows are perfect for routines and quick tasks that don't need multiple phases.
+            💡 <strong>Tip:</strong> Every workflow can grow into multiple stages, so your routines and projects stay connected in one system.
           </p>
         </div>
 
@@ -114,17 +113,28 @@ export function WorkflowHierarchyExplainer({ isOpen, onDismiss }: WorkflowHierar
 }
 
 // Hook to check if explainer should be shown
-export function useShowHierarchyExplainer() {
+export function useShowHierarchyExplainer(scopeKey?: string | null) {
   const [shouldShow, setShouldShow] = useState(false);
+  const resolvedScope = scopeKey?.trim() || null;
+  const storageKey = resolvedScope
+    ? `workflow-hierarchy-dismissed:v2:${resolvedScope}`
+    : null;
 
   useEffect(() => {
-    const dismissed = localStorage.getItem('workflow-hierarchy-dismissed');
-    setShouldShow(!dismissed);
-  }, []);
+    if (!storageKey) {
+      setShouldShow(false);
+      return;
+    }
+    const dismissedLocal = localStorage.getItem(storageKey);
+    const dismissedSession = sessionStorage.getItem(storageKey);
+    setShouldShow(!(dismissedLocal || dismissedSession));
+  }, [storageKey]);
 
   const dismiss = () => {
     setShouldShow(false);
-    localStorage.setItem('workflow-hierarchy-dismissed', 'true');
+    if (!storageKey) return;
+    localStorage.setItem(storageKey, 'true');
+    sessionStorage.setItem(storageKey, 'true');
   };
 
   return { shouldShow, dismiss };

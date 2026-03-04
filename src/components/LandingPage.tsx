@@ -26,25 +26,25 @@ export function LandingPage({ onTryDemo }: LandingPageProps) {
       icon: Mic,
       title: "Voice-First Planning",
       description: "Say what you're about to work on. Out loud. Clarity sharpens when it has to survive language.",
-      color: "bg-blue-500/10 text-blue-500",
+      color: "bg-primary/12 text-primary",
     },
     {
       icon: Layers,
       title: "Simple Session Structure",
       description: "Start → Focus → Finish → Reflect. No dashboards pretending to be wisdom.",
-      color: "bg-emerald-500/10 text-emerald-500",
+      color: "bg-accent/15 text-accent",
     },
     {
       icon: Heart,
       title: "Memory Without Shame",
       description: "The app remembers past sessions so you don't have to. No streak pressure. No guilt metrics.",
-      color: "bg-rose-500/10 text-rose-500",
+      color: "bg-[hsl(var(--status-active)/0.15)] text-[hsl(var(--status-active))]",
     },
     {
       icon: Users,
       title: "Designed for Builders",
       description: "Founders, creatives, operators, thinkers. People whose work doesn't fit neatly into checkboxes.",
-      color: "bg-violet-500/10 text-violet-500",
+      color: "bg-secondary text-foreground/80",
     },
   ];
 
@@ -152,6 +152,31 @@ export function LandingPage({ onTryDemo }: LandingPageProps) {
             </Link>
           </motion.p>
         </div>
+
+        {/* Mobile hero visual */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: "easeOut", delay: 0.18 }}
+          className="md:hidden"
+        >
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold">First Session Flow</span>
+              <span className="text-xs text-muted-foreground px-2 py-1 rounded-full bg-secondary">3 mins</span>
+            </div>
+            <div className="space-y-2.5">
+              {["Speak goal", "Approve tasks", "Start timer"].map((item, idx) => (
+                <div key={item} className="flex items-center gap-2 rounded-xl border border-border/70 bg-secondary/30 px-3 py-2.5">
+                  <span className="w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-semibold inline-flex items-center justify-center">
+                    {idx + 1}
+                  </span>
+                  <span className="text-sm text-foreground">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
 
         {/* Right side mock */}
         <motion.div

@@ -20,7 +20,7 @@ export function DemoBanner() {
           <Sparkles className="w-4 h-4" />
           <span className="font-medium">Demo Mode</span>
           <span className="hidden sm:inline text-primary-foreground/80">
-            — Explore the app without signing up
+            — Sample data only. Changes are read-only and won’t be saved.
           </span>
         </div>
         <div className="flex items-center gap-2">

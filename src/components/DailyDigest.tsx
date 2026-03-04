@@ -201,21 +201,21 @@ export function DailyDigest() {
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-green-500" />
+            <CheckCircle2 className="w-4 h-4 text-[hsl(var(--status-active))]" />
             <div>
               <p className="text-lg font-semibold text-foreground">{digest.sessionsCompleted}</p>
               <p className="text-xs text-muted-foreground">Sessions</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-blue-500" />
+            <Clock className="w-4 h-4 text-primary" />
             <div>
               <p className="text-lg font-semibold text-foreground">{digest.totalMinutes}</p>
               <p className="text-xs text-muted-foreground">Minutes</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-orange-500" />
+            <Calendar className="w-4 h-4 text-[hsl(var(--status-warning))]" />
             <div>
               <p className="text-lg font-semibold text-foreground">{digest.tasksCompleted}</p>
               <p className="text-xs text-muted-foreground">Tasks</p>

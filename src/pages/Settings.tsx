@@ -268,7 +268,7 @@ export default function Settings() {
         };
 
   return (
-    <motion.div className="min-h-dvh bg-background px-4 py-6 pb-24 md:px-6 md:pb-10" {...reveal()}>
+    <motion.div className="min-h-dvh page-shell bg-background px-4 py-6 md:px-6" {...reveal()}>
       <motion.div className="max-w-7xl mx-auto space-y-6" {...reveal(0.04)}>
         {/* Header */}
         <motion.div className="flex items-center gap-4" {...reveal(0.08)}>
@@ -387,31 +387,31 @@ export default function Settings() {
             {/* Stats Grid */}
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
               <StatCard
-                icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                icon={<CheckCircle2 className="w-4 h-4 text-[hsl(var(--status-active))]" />}
                 label="Sessions"
                 value={displayedStats.total_sessions_completed}
-                bgColor="bg-emerald-500/10"
+                bgColor="bg-[hsl(var(--status-active)/0.14)]"
                 onClick={() => !isDemo && setActiveStatSheet('sessions')}
               />
               <StatCard
-                icon={<Clock className="w-4 h-4 text-blue-500" />}
+                icon={<Clock className="w-4 h-4 text-primary" />}
                 label="Time Focused"
                 value={formatTime(displayedStats.total_minutes_worked)}
-                bgColor="bg-blue-500/10"
+                bgColor="bg-primary/12"
                 onClick={() => !isDemo && setActiveStatSheet('time')}
               />
               <StatCard
-                icon={<Flame className="w-4 h-4 text-orange-500" />}
+                icon={<Flame className="w-4 h-4 text-[hsl(var(--status-warning))]" />}
                 label="Day Streak"
                 value={displayedStats.current_streak}
-                bgColor="bg-orange-500/10"
+                bgColor="bg-[hsl(var(--status-warning)/0.14)]"
                 onClick={() => !isDemo && setActiveStatSheet('streak')}
               />
               <StatCard
-                icon={<FolderKanban className="w-4 h-4 text-violet-500" />}
+                icon={<FolderKanban className="w-4 h-4 text-accent" />}
                 label="Projects Done"
                 value={displayedStats.projects_completed}
-                bgColor="bg-violet-500/10"
+                bgColor="bg-[hsl(var(--accent)/0.14)]"
                 onClick={() => !isDemo && setActiveStatSheet('projects')}
               />
             </div>

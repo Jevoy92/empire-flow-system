@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useDemo } from '@/contexts/DemoContext';
 import { useSession } from '@/contexts/SessionContext';
 import { motion, useReducedMotion } from 'framer-motion';
+import { getCategoryColor, getVentureCardTone, getVentureLabel } from '@/data/ventures';
 import {
   Dialog,
   DialogContent,
@@ -38,117 +39,10 @@ interface Session {
   duration_minutes: number | null;
 }
 
-// Venture colors mapping
-const ventureColors: Record<string, string> = {
-  'palmer-house': 'bg-venture-palmer',
-  'besettld': 'bg-venture-besettld',
-  'yourboy': 'bg-venture-yourboy',
-  'strinzees': 'bg-venture-strinzees',
-  'daily-maintenance': 'bg-venture-maintenance',
-  'body-energy': 'bg-venture-energy',
-  'admin-life': 'bg-venture-admin',
-  'transition': 'bg-venture-transition',
-  'care-relationships': 'bg-venture-care',
-  'side-project': 'bg-primary',
-  'learning': 'bg-blue-500',
-  'creative': 'bg-purple-500',
-  'business': 'bg-emerald-500',
-};
-
-const ventureNames: Record<string, string> = {
-  'palmer-house': 'Palmer House',
-  'besettld': 'beSettld',
-  'yourboy': 'YourBoyJevoy',
-  'strinzees': 'Strinzees',
-  'daily-maintenance': 'Daily Maintenance',
-  'body-energy': 'Body & Energy',
-  'admin-life': 'Admin Life',
-  'transition': 'Transition',
-  'care-relationships': 'Care & Relationships',
-  'side-project': 'Side Project',
-  'learning': 'Learning',
-  'creative': 'Creative',
-  'business': 'Business',
-};
-
-const ventureCardTone: Record<string, { bg: string; border: string; accent: string }> = {
-  'palmer-house': {
-    bg: 'bg-sky-500/10',
-    border: 'border-sky-500/30',
-    accent: 'bg-sky-500',
-  },
-  'besettld': {
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/30',
-    accent: 'bg-emerald-500',
-  },
-  'yourboy': {
-    bg: 'bg-violet-500/10',
-    border: 'border-violet-500/30',
-    accent: 'bg-violet-500',
-  },
-  'strinzees': {
-    bg: 'bg-orange-500/10',
-    border: 'border-orange-500/30',
-    accent: 'bg-orange-500',
-  },
-  'daily-maintenance': {
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/30',
-    accent: 'bg-amber-500',
-  },
-  'body-energy': {
-    bg: 'bg-green-500/10',
-    border: 'border-green-500/30',
-    accent: 'bg-green-500',
-  },
-  'admin-life': {
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/30',
-    accent: 'bg-blue-500',
-  },
-  'transition': {
-    bg: 'bg-purple-500/10',
-    border: 'border-purple-500/30',
-    accent: 'bg-purple-500',
-  },
-  'care-relationships': {
-    bg: 'bg-pink-500/10',
-    border: 'border-pink-500/30',
-    accent: 'bg-pink-500',
-  },
-  'side-project': {
-    bg: 'bg-orange-400/10',
-    border: 'border-orange-400/30',
-    accent: 'bg-orange-400',
-  },
-  'learning': {
-    bg: 'bg-teal-400/10',
-    border: 'border-teal-400/30',
-    accent: 'bg-teal-400',
-  },
-  'creative': {
-    bg: 'bg-rose-400/10',
-    border: 'border-rose-400/30',
-    accent: 'bg-rose-400',
-  },
-  'business': {
-    bg: 'bg-emerald-400/10',
-    border: 'border-emerald-400/30',
-    accent: 'bg-emerald-400',
-  },
-};
-
-const fallbackTone = {
-  bg: 'bg-slate-500/10',
-  border: 'border-slate-500/30',
-  accent: 'bg-slate-400',
-};
-
 const statusTone: Record<string, string> = {
-  completed: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25',
-  abandoned: 'bg-rose-500/15 text-rose-300 border border-rose-500/25',
-  active: 'bg-blue-500/15 text-blue-300 border border-blue-500/25',
+  completed: 'bg-[hsl(var(--status-active)/0.15)] text-[hsl(var(--status-active))] border border-[hsl(var(--status-active)/0.28)]',
+  abandoned: 'bg-destructive/15 text-destructive border border-destructive/30',
+  active: 'bg-primary/15 text-primary border border-primary/30',
 };
 
 interface TaskBreakdownRow {
@@ -162,10 +56,13 @@ interface TaskBreakdownRow {
 }
 
 export default function History() {
+  const PAGE_SIZE = 18;
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalSessions, setTotalSessions] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const demo = useDemo();
@@ -186,8 +83,11 @@ export default function History() {
 
   useEffect(() => {
     if (isDemo && demo) {
-      // Use demo sessions
-      setSessions(demo.sessions as Session[]);
+      const demoSessions = (demo.sessions as Session[]) || [];
+      const start = (page - 1) * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      setTotalSessions(demoSessions.length);
+      setSessions(demoSessions.slice(start, end));
       setLoading(false);
     } else {
       loadSessions();
@@ -212,17 +112,21 @@ export default function History() {
         supabase.removeChannel(channel);
       };
     }
-  }, [isDemo, demo]);
+  }, [isDemo, demo, page]);
 
   const loadSessions = async () => {
-    const { data, error } = await supabase
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, error, count } = await supabase
       .from('sessions')
-      .select('*')
-      .order('started_at', { ascending: false });
+      .select('*', { count: 'exact' })
+      .order('started_at', { ascending: false })
+      .range(from, to);
 
     if (error) {
       console.error('Error loading sessions:', error);
     } else {
+      setTotalSessions(count || 0);
       setSessions((data || []).map(session => ({
         ...session,
         tasks: (session.tasks as unknown as SessionTask[]) || []
@@ -331,6 +235,13 @@ export default function History() {
 
     return Object.entries(groups);
   }, [sessions]);
+  const totalPages = Math.max(1, Math.ceil(totalSessions / PAGE_SIZE));
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const sessionTaskBreakdown = selectedSession
     ? getTaskBreakdown(selectedSession)
@@ -360,7 +271,7 @@ export default function History() {
 
   if (loading) {
     return (
-      <div className="min-h-screen pb-24 md:pb-10 p-6">
+      <div className="min-h-screen page-shell p-6">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl font-semibold mb-6">History</h1>
           <div className="text-muted-foreground">Loading...</div>
@@ -370,7 +281,7 @@ export default function History() {
   }
 
   return (
-    <motion.div className="min-h-screen pb-24 md:pb-10 p-6 bg-background" {...reveal()}>
+    <motion.div className="min-h-screen page-shell p-6 bg-background" {...reveal()}>
       <motion.div className="max-w-6xl mx-auto" {...reveal(0.04)}>
         <motion.h1 className="text-2xl font-semibold mb-6" {...reveal(0.08)}>
           History
@@ -402,8 +313,8 @@ export default function History() {
                     {daySessions.map((session) => {
                       const completedTasks = session.tasks.filter(t => t.completed).length;
                       const totalTasks = session.tasks.length;
-                      const colorClass = ventureColors[session.venture] || 'bg-primary';
-                      const tone = ventureCardTone[session.venture] || fallbackTone;
+                      const colorClass = getCategoryColor(session.venture).bg;
+                      const tone = getVentureCardTone(session.venture);
                       const badgeTone = statusTone[session.status] || 'bg-secondary text-secondary-foreground border border-border';
 
                       return (
@@ -439,7 +350,7 @@ export default function History() {
                               {session.focus}
                             </div>
                             <div className="text-xs text-muted-foreground/90">
-                              {ventureNames[session.venture] || session.venture} • {session.work_type}
+                              {getVentureLabel(session.venture)} • {session.work_type}
                             </div>
                             <div className="mt-1.5 flex items-center gap-2">
                               <span className={`text-[10px] px-2 py-0.5 rounded-full ${badgeTone}`}>
@@ -490,7 +401,7 @@ export default function History() {
                   <>
                     <h2 className="text-lg font-semibold text-foreground truncate">{desktopSession.focus}</h2>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {ventureNames[desktopSession.venture] || desktopSession.venture} • {desktopSession.work_type}
+                      {getVentureLabel(desktopSession.venture)} • {desktopSession.work_type}
                     </p>
 
                     <div className="grid grid-cols-3 gap-2 mt-4">
@@ -537,7 +448,7 @@ export default function History() {
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex items-start gap-2 min-w-0">
                                   {task.completed ? (
-                                    <CheckCircle className="w-4 h-4 mt-0.5 text-emerald-500 shrink-0" />
+                                    <CheckCircle className="w-4 h-4 mt-0.5 text-[hsl(var(--status-active))] shrink-0" />
                                   ) : (
                                     <Circle className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
                                   )}
@@ -557,7 +468,7 @@ export default function History() {
                                     {task.minutes !== null ? `${task.minutes}m` : 'n/a'}
                                   </p>
                                   {task.isEstimated && (
-                                    <p className="text-[10px] text-amber-500">estimated</p>
+                                    <p className="text-[10px] text-[hsl(var(--status-warning))]">estimated</p>
                                   )}
                                 </div>
                               </div>
@@ -597,6 +508,30 @@ export default function History() {
             </motion.aside>
           </motion.div>
         )}
+
+        {totalSessions > PAGE_SIZE && (
+          <div className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/60 p-3">
+            <p className="text-xs text-muted-foreground">
+              Page {page} of {totalPages} • {totalSessions} total sessions
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                disabled={page <= 1}
+                className="btn-secondary px-3 py-1.5 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={page >= totalPages}
+                className="btn-secondary px-3 py-1.5 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       <Dialog open={!isDesktop && Boolean(selectedSession)} onOpenChange={(open) => !open && setSelectedSession(null)}>
@@ -606,7 +541,7 @@ export default function History() {
               <DialogHeader>
                 <DialogTitle className="pr-8">{selectedSession.focus}</DialogTitle>
                 <DialogDescription className="text-left">
-                  {ventureNames[selectedSession.venture] || selectedSession.venture} • {selectedSession.work_type}
+                  {getVentureLabel(selectedSession.venture)} • {selectedSession.work_type}
                 </DialogDescription>
               </DialogHeader>
 
@@ -654,7 +589,7 @@ export default function History() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-2 min-w-0">
                             {task.completed ? (
-                              <CheckCircle className="w-4 h-4 mt-0.5 text-emerald-500 shrink-0" />
+                              <CheckCircle className="w-4 h-4 mt-0.5 text-[hsl(var(--status-active))] shrink-0" />
                             ) : (
                               <Circle className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
                             )}
@@ -674,7 +609,7 @@ export default function History() {
                               {task.minutes !== null ? `${task.minutes}m` : 'n/a'}
                             </p>
                             {task.isEstimated && (
-                              <p className="text-[10px] text-amber-500">estimated</p>
+                              <p className="text-[10px] text-[hsl(var(--status-warning))]">estimated</p>
                             )}
                           </div>
                         </div>

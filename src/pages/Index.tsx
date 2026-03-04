@@ -98,7 +98,7 @@ const Index = () => {
           {view === 'setup' && (
             <motion.div
               key="setup-screen"
-              className="min-h-screen flex items-center justify-center p-8 pb-24"
+              className="min-h-screen page-shell flex items-center justify-center p-8"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}

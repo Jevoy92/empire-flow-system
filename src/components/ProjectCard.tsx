@@ -3,6 +3,7 @@ import { ChevronRight, ChevronDown, Pause, Play, Check, MoreVertical, Trash2, Ro
 import { supabase } from '@/integrations/supabase/client';
 import { getCategoryById, getCategoryColor } from '@/data/ventures';
 import { Project, ProjectStage } from '@/pages/Workflows';
+import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,12 +16,14 @@ interface ProjectCardProps {
   onContinue: () => void;
   onRefresh: () => void;
   defaultExpanded?: boolean;
+  isDemo?: boolean;
 }
 
-export function ProjectCard({ project, onContinue, onRefresh, defaultExpanded }: ProjectCardProps) {
+export function ProjectCard({ project, onContinue, onRefresh, defaultExpanded, isDemo = false }: ProjectCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded ?? project.status === 'active');
   const [expandedStages, setExpandedStages] = useState<Set<number>>(new Set([project.current_stage]));
+  const { toast } = useToast();
   
   const category = getCategoryById(project.venture);
   const catColor = getCategoryColor(project.venture);
@@ -52,6 +55,13 @@ export function ProjectCard({ project, onContinue, onRefresh, defaultExpanded }:
   };
 
   const togglePause = async () => {
+    if (isDemo) {
+      toast({
+        title: 'Demo mode',
+        description: 'Project status changes are disabled in demo mode.',
+      });
+      return;
+    }
     setIsUpdating(true);
     const newStatus = project.status === 'paused' ? 'active' : 'paused';
     await supabase
@@ -63,6 +73,13 @@ export function ProjectCard({ project, onContinue, onRefresh, defaultExpanded }:
   };
 
   const deleteProject = async () => {
+    if (isDemo) {
+      toast({
+        title: 'Demo mode',
+        description: 'Deleting projects is disabled in demo mode.',
+      });
+      return;
+    }
     if (!confirm('Are you sure you want to delete this project?')) return;
     setIsUpdating(true);
     await supabase
@@ -73,6 +90,13 @@ export function ProjectCard({ project, onContinue, onRefresh, defaultExpanded }:
   };
 
   const resetProject = async () => {
+    if (isDemo) {
+      toast({
+        title: 'Demo mode',
+        description: 'Project reset is disabled in demo mode.',
+      });
+      return;
+    }
     if (!confirm('Reset project to the beginning?')) return;
     setIsUpdating(true);
     const resetStages = project.stages.map(s => ({ 

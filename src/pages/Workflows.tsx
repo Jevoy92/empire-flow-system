@@ -76,11 +76,11 @@ export default function Workflows() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer();
   const demo = useDemo();
 
   const isDemo = location.search.includes('demo=1');
   const demoSuffix = isDemo ? '?demo=1' : '';
+  const { shouldShow: showHierarchyExplainer, dismiss: dismissHierarchyExplainer } = useShowHierarchyExplainer(isDemo ? 'demo' : user?.id);
 
   const [templates, setTemplates] = useState<Template[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -259,7 +259,7 @@ export default function Workflows() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh pb-24 md:pb-10 p-6 animate-fade-in overflow-y-auto">
+      <div className="min-h-dvh page-shell p-6 animate-fade-in overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl font-semibold mb-2 flex items-center gap-2">
             <Layers className="w-6 h-6" />
@@ -273,7 +273,7 @@ export default function Workflows() {
   }
 
   return (
-    <motion.div className="min-h-screen pb-24 md:pb-10 p-6" {...reveal()}>
+    <motion.div className="min-h-screen page-shell p-6" {...reveal()}>
       <motion.div className="max-w-7xl mx-auto space-y-6" {...reveal(0.04)}>
         <motion.div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between" {...reveal(0.08)}>
           <div>
@@ -340,6 +340,7 @@ export default function Workflows() {
                       project={project}
                       onContinue={() => handleContinueProject(project)}
                       onRefresh={loadProjects}
+                      isDemo={isDemo}
                     />
                   ))}
                 </div>

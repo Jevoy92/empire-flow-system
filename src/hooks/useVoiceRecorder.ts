@@ -9,6 +9,7 @@ interface UseVoiceRecorderReturn {
   stopRecording: () => Promise<string | null>;
   error: string | null;
   isModelLoading: boolean;
+  engine: 'web-speech' | 'server' | 'none';
 }
 
 interface SpeechRecognitionAlternativeLike {
@@ -88,6 +89,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const [partialText, setPartialText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isModelLoading, setIsModelLoading] = useState(false);
+  const [engine, setEngine] = useState<'web-speech' | 'server' | 'none'>('none');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -138,6 +140,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     mediaRecorderRef.current = recorder;
     chunksRef.current = [];
     modeRef.current = 'media';
+    setEngine('server');
 
     recorder.ondataavailable = (event: BlobEvent) => {
       if (event.data.size > 0) {
@@ -158,6 +161,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     const recognition = new SpeechRecognition();
     speechRecognitionRef.current = recognition;
     modeRef.current = 'speech';
+    setEngine('web-speech');
 
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -213,19 +217,25 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       setError(null);
       setPartialText('');
       accumulatedTextRef.current = '';
-      setIsModelLoading(true);
-
       const SpeechRecognition = getSpeechRecognitionCtor();
       if (SpeechRecognition) {
-        startSpeechRecognition();
-      } else {
-        await startMediaRecording();
+        try {
+          setIsModelLoading(false);
+          startSpeechRecognition();
+          return;
+        } catch (speechError) {
+          console.warn('Web Speech start failed, falling back to server transcription:', speechError);
+        }
       }
+
+      setIsModelLoading(true);
+      await startMediaRecording();
     } catch (err) {
       console.error('Failed to start recording:', err);
       setError(err instanceof Error ? err.message : 'Microphone access denied');
       setIsRecording(false);
       setIsProcessing(false);
+      setEngine('none');
     } finally {
       setIsModelLoading(false);
     }
@@ -298,5 +308,6 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     stopRecording,
     error,
     isModelLoading,
+    engine,
   };
 }

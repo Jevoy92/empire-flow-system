@@ -12,113 +12,114 @@ export interface Category {
 
 // Individual category colors for visual coding - each category gets a unique color
 export const categoryColors: Record<string, { bg: string; border: string; text: string; light: string }> = {
-  // Personal (5 distinct colors)
-  'daily-maintenance': { 
-    bg: 'bg-amber-500', 
-    border: 'border-l-amber-500', 
-    text: 'text-amber-500', 
-    light: 'bg-amber-500/10' 
+  // Personal
+  'daily-maintenance': {
+    bg: 'bg-venture-maintenance',
+    border: 'border-l-[hsl(var(--venture-maintenance))]',
+    text: 'text-[hsl(var(--venture-maintenance))]',
+    light: 'bg-[hsl(var(--venture-maintenance)/0.12)]',
   },
-  'body-energy': { 
-    bg: 'bg-emerald-500', 
-    border: 'border-l-emerald-500', 
-    text: 'text-emerald-500', 
-    light: 'bg-emerald-500/10' 
+  'body-energy': {
+    bg: 'bg-venture-energy',
+    border: 'border-l-[hsl(var(--venture-energy))]',
+    text: 'text-[hsl(var(--venture-energy))]',
+    light: 'bg-[hsl(var(--venture-energy)/0.12)]',
   },
-  'admin-life': { 
-    bg: 'bg-blue-500', 
-    border: 'border-l-blue-500', 
-    text: 'text-blue-500', 
-    light: 'bg-blue-500/10' 
+  'admin-life': {
+    bg: 'bg-venture-admin',
+    border: 'border-l-[hsl(var(--venture-admin))]',
+    text: 'text-[hsl(var(--venture-admin))]',
+    light: 'bg-[hsl(var(--venture-admin)/0.12)]',
   },
-  'transition': { 
-    bg: 'bg-violet-500', 
-    border: 'border-l-violet-500', 
-    text: 'text-violet-500', 
-    light: 'bg-violet-500/10' 
+  'transition': {
+    bg: 'bg-venture-transition',
+    border: 'border-l-[hsl(var(--venture-transition))]',
+    text: 'text-[hsl(var(--venture-transition))]',
+    light: 'bg-[hsl(var(--venture-transition)/0.12)]',
   },
-  'care-relationships': { 
-    bg: 'bg-pink-500', 
-    border: 'border-l-pink-500', 
-    text: 'text-pink-500', 
-    light: 'bg-pink-500/10' 
+  'care-relationships': {
+    bg: 'bg-venture-care',
+    border: 'border-l-[hsl(var(--venture-care))]',
+    text: 'text-[hsl(var(--venture-care))]',
+    light: 'bg-[hsl(var(--venture-care)/0.12)]',
   },
-  
-  // Projects (4 distinct colors)
-  'side-project': { 
-    bg: 'bg-orange-500', 
-    border: 'border-l-orange-500', 
-    text: 'text-orange-500', 
-    light: 'bg-orange-500/10' 
+
+  // Projects
+  'side-project': {
+    bg: 'bg-venture-side-project',
+    border: 'border-l-[hsl(var(--venture-side-project))]',
+    text: 'text-[hsl(var(--venture-side-project))]',
+    light: 'bg-[hsl(var(--venture-side-project)/0.12)]',
   },
-  'learning': { 
-    bg: 'bg-teal-500', 
-    border: 'border-l-teal-500', 
-    text: 'text-teal-500', 
-    light: 'bg-teal-500/10' 
+  'learning': {
+    bg: 'bg-venture-learning',
+    border: 'border-l-[hsl(var(--venture-learning))]',
+    text: 'text-[hsl(var(--venture-learning))]',
+    light: 'bg-[hsl(var(--venture-learning)/0.12)]',
   },
-  'creative': { 
-    bg: 'bg-rose-500', 
-    border: 'border-l-rose-500', 
-    text: 'text-rose-500', 
-    light: 'bg-rose-500/10' 
+  'creative': {
+    bg: 'bg-venture-creative',
+    border: 'border-l-[hsl(var(--venture-creative))]',
+    text: 'text-[hsl(var(--venture-creative))]',
+    light: 'bg-[hsl(var(--venture-creative)/0.12)]',
   },
-  'collaboration': { 
-    bg: 'bg-indigo-500', 
-    border: 'border-l-indigo-500', 
-    text: 'text-indigo-500', 
-    light: 'bg-indigo-500/10' 
+  'collaboration': {
+    bg: 'bg-venture-collaboration',
+    border: 'border-l-[hsl(var(--venture-collaboration))]',
+    text: 'text-[hsl(var(--venture-collaboration))]',
+    light: 'bg-[hsl(var(--venture-collaboration)/0.12)]',
   },
-  
-  // Business (4 distinct colors)
-  'palmer-house': { 
-    bg: 'bg-sky-600', 
-    border: 'border-l-sky-600', 
-    text: 'text-sky-600', 
-    light: 'bg-sky-600/10' 
+
+  // Business
+  'palmer-house': {
+    bg: 'bg-venture-palmer',
+    border: 'border-l-[hsl(var(--venture-palmer))]',
+    text: 'text-[hsl(var(--venture-palmer))]',
+    light: 'bg-[hsl(var(--venture-palmer)/0.12)]',
   },
-  'besettld': { 
-    bg: 'bg-green-600', 
-    border: 'border-l-green-600', 
-    text: 'text-green-600', 
-    light: 'bg-green-600/10' 
+  'besettld': {
+    bg: 'bg-venture-besettld',
+    border: 'border-l-[hsl(var(--venture-besettld))]',
+    text: 'text-[hsl(var(--venture-besettld))]',
+    light: 'bg-[hsl(var(--venture-besettld)/0.12)]',
   },
-  'yourboy': { 
-    bg: 'bg-purple-600', 
-    border: 'border-l-purple-600', 
-    text: 'text-purple-600', 
-    light: 'bg-purple-600/10' 
+  'yourboy': {
+    bg: 'bg-venture-yourboy',
+    border: 'border-l-[hsl(var(--venture-yourboy))]',
+    text: 'text-[hsl(var(--venture-yourboy))]',
+    light: 'bg-[hsl(var(--venture-yourboy)/0.12)]',
   },
-  'strinzees': { 
-    bg: 'bg-orange-600', 
-    border: 'border-l-orange-600', 
-    text: 'text-orange-600', 
-    light: 'bg-orange-600/10' 
+  'strinzees': {
+    bg: 'bg-venture-strinzees',
+    border: 'border-l-[hsl(var(--venture-strinzees))]',
+    text: 'text-[hsl(var(--venture-strinzees))]',
+    light: 'bg-[hsl(var(--venture-strinzees)/0.12)]',
   },
 };
 
 // Dynamic color palette for user ventures (consistent assignment based on name)
 const dynamicColorPalette = [
-  { bg: 'bg-amber-500', border: 'border-l-amber-500', text: 'text-amber-500', light: 'bg-amber-500/10' },
-  { bg: 'bg-emerald-500', border: 'border-l-emerald-500', text: 'text-emerald-500', light: 'bg-emerald-500/10' },
-  { bg: 'bg-blue-500', border: 'border-l-blue-500', text: 'text-blue-500', light: 'bg-blue-500/10' },
-  { bg: 'bg-violet-500', border: 'border-l-violet-500', text: 'text-violet-500', light: 'bg-violet-500/10' },
-  { bg: 'bg-pink-500', border: 'border-l-pink-500', text: 'text-pink-500', light: 'bg-pink-500/10' },
-  { bg: 'bg-orange-500', border: 'border-l-orange-500', text: 'text-orange-500', light: 'bg-orange-500/10' },
-  { bg: 'bg-teal-500', border: 'border-l-teal-500', text: 'text-teal-500', light: 'bg-teal-500/10' },
-  { bg: 'bg-rose-500', border: 'border-l-rose-500', text: 'text-rose-500', light: 'bg-rose-500/10' },
-  { bg: 'bg-indigo-500', border: 'border-l-indigo-500', text: 'text-indigo-500', light: 'bg-indigo-500/10' },
-  { bg: 'bg-cyan-500', border: 'border-l-cyan-500', text: 'text-cyan-500', light: 'bg-cyan-500/10' },
-  { bg: 'bg-lime-500', border: 'border-l-lime-500', text: 'text-lime-500', light: 'bg-lime-500/10' },
-  { bg: 'bg-fuchsia-500', border: 'border-l-fuchsia-500', text: 'text-fuchsia-500', light: 'bg-fuchsia-500/10' },
+  categoryColors['daily-maintenance'],
+  categoryColors['body-energy'],
+  categoryColors['admin-life'],
+  categoryColors['transition'],
+  categoryColors['care-relationships'],
+  categoryColors['side-project'],
+  categoryColors['learning'],
+  categoryColors['creative'],
+  categoryColors['collaboration'],
+  categoryColors['palmer-house'],
+  categoryColors['besettld'],
+  categoryColors['yourboy'],
+  categoryColors['strinzees'],
 ];
 
 // Default fallback color
 const defaultCategoryColor = { 
-  bg: 'bg-gray-500', 
-  border: 'border-l-gray-500', 
-  text: 'text-gray-500', 
-  light: 'bg-gray-500/10' 
+  bg: 'bg-primary',
+  border: 'border-l-primary',
+  text: 'text-primary',
+  light: 'bg-primary/10'
 };
 
 // Simple hash function to get consistent index from string
@@ -580,6 +581,25 @@ export const defaultTasks: Record<string, string[]> = {
 // Helper to get category by id
 export function getCategoryById(id: string): Category | undefined {
   return categories.find(c => c.id === id);
+}
+
+export function getVentureLabel(id: string): string {
+  const category = getCategoryById(id);
+  if (category?.name) return category.name;
+
+  const venture = ventures.find((item) => item.id === id);
+  if (venture?.name) return venture.name;
+
+  return id;
+}
+
+export function getVentureCardTone(id: string): { bg: string; border: string; accent: string } {
+  const color = getCategoryColor(id);
+  return {
+    bg: color.light,
+    border: 'border-border/70',
+    accent: color.bg,
+  };
 }
 
 // Helper to get work types for a category
