@@ -684,7 +684,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
                   <span className={`text-xs ${
                     subtask.completed
                       ? 'text-muted-foreground line-through'
-                      : 'text-muted-foreground'
+                      : 'text-foreground/75'
                   }`}>
                     {subtask.text}
                   </span>
@@ -766,7 +766,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
   );
 
   return (
-    <div className="w-full max-w-lg mx-auto px-4 animate-fade-in bg-session-warm min-h-screen py-6 -mt-6 -mx-4 px-8">
+    <div className="w-full max-w-lg mx-auto px-4 py-5 animate-fade-in">
       {/* Minimize Button */}
       <div className="flex justify-end mb-2">
         <button
@@ -779,7 +779,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
       </div>
 
       {/* Task Context Card */}
-      <div className="card-elevated p-4 mb-6">
+      <div className="card-elevated p-4 mb-6 border border-border/70">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-xl ${getCategoryColor()} flex items-center justify-center`}>
             <span className="text-white text-lg font-semibold">
@@ -787,13 +787,13 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-foreground/70">
               {ventureLabel} • {workType}
             </div>
             <div className="font-medium text-foreground truncate">{focus}</div>
           </div>
           {totalVentureMinutes > 0 && (
-            <div className="text-xs text-muted-foreground text-right">
+            <div className="text-xs text-foreground/70 text-right">
               <div className="font-medium text-foreground">{formatMinutes(totalVentureMinutes)}</div>
               <div>total</div>
             </div>
@@ -807,12 +807,12 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
           <span className="text-5xl font-light text-foreground font-mono tracking-tight">
             {formatTime(elapsedSeconds)}
           </span>
-          <span className="text-sm text-muted-foreground mt-1">
+          <span className="text-sm text-foreground/70 mt-1">
             {completedUnits} of {totalUnits} steps
           </span>
         </CircularProgress>
         
-        <p className="text-muted-foreground text-sm mt-4">
+        <p className="text-foreground/70 text-sm mt-4">
           {isPaused ? 'Paused' : 'Stay focused • You got this'}
         </p>
       </div>
@@ -845,12 +845,12 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
       </div>
 
       {/* Task List */}
-      <div className="card-elevated overflow-hidden">
+      <div className="card-elevated overflow-hidden border border-border/70">
         <div className="px-4 py-3 border-b border-border bg-muted/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Ongoing</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground/70">Ongoing</p>
+              <p className="text-xs text-foreground/65 mt-0.5">
                 {ongoingTasks.length} active • {completedTasks.length} done
               </p>
             </div>
@@ -864,7 +864,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
 
         <div className="p-3 space-y-2">
           {ongoingTasks.length === 0 && (
-            <div className="text-sm text-muted-foreground px-1 py-2">
+            <div className="text-sm text-foreground/70 px-1 py-2">
               No active tasks. Add one below or ask AI to generate a plan.
             </div>
           )}
@@ -875,7 +875,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
           <div className="border-t border-border">
             <button
               onClick={() => setShowCompletedTasks((prev) => !prev)}
-              className="w-full px-4 py-2.5 flex items-center justify-between text-xs text-muted-foreground hover:bg-secondary/40 transition-colors"
+              className="w-full px-4 py-2.5 flex items-center justify-between text-xs text-foreground/70 hover:bg-secondary/40 transition-colors"
             >
               <span>Completed ({completedTasks.length})</span>
               {showCompletedTasks ? (
@@ -909,7 +909,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
             </button>
             <button
               onClick={() => { setShowAddTask(false); setNewTaskText(''); }}
-              className="p-2 rounded-lg hover:bg-secondary text-muted-foreground"
+              className="p-2 rounded-lg hover:bg-secondary text-foreground/65"
             >
               <X className="w-4 h-4" />
             </button>
@@ -917,7 +917,7 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
         ) : (
           <button
             onClick={() => setShowAddTask(true)}
-            className="w-full p-3 border-t border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors flex items-center justify-center gap-2 text-sm"
+            className="w-full p-3 border-t border-border text-foreground/70 hover:text-foreground hover:bg-secondary/50 transition-colors flex items-center justify-center gap-2 text-sm"
           >
             <Plus className="w-4 h-4" />
             Add task
@@ -946,8 +946,8 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
       />
 
       {/* Completion Condition */}
-      <div className="mt-4 text-center text-xs text-muted-foreground">
-        Done when: <span className="text-foreground">{completionCondition}</span>
+      <div className="mt-4 text-center text-xs text-foreground/70">
+        Done when: <span className="text-foreground font-medium">{completionCondition}</span>
       </div>
     </div>
   );

@@ -413,7 +413,7 @@ export function SessionAssistant({
   };
 
   return (
-    <div className="card-elevated overflow-hidden mt-4 border border-primary/10">
+    <div className="card-elevated overflow-hidden mt-4 border border-border/70">
       {/* Header with AI presence indicator - Always breathing */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -431,11 +431,11 @@ export function SessionAssistant({
             {/* Core dot */}
             <div className="relative w-2.5 h-2.5 rounded-full bg-primary" />
           </div>
-          <span className="text-muted-foreground">
+          <span className="text-foreground/70">
             {getStatusText()}
           </span>
           {messages.length > 0 && !isLoading && (
-            <span className="text-xs text-muted-foreground/60">
+            <span className="text-xs text-foreground/50">
               • {messages.length} messages
             </span>
           )}
@@ -456,7 +456,7 @@ export function SessionAssistant({
               className={`py-2 text-sm animate-message-in ${
                 msg.role === 'user'
                   ? 'text-foreground'
-                  : 'text-muted-foreground border-l-2 border-primary/30 pl-3 ml-1'
+                  : 'text-foreground/75 border-l-2 border-primary/30 pl-3 ml-1'
               }`}
             >
               <span className="font-medium text-xs uppercase tracking-wide opacity-60 block mb-0.5">
@@ -491,7 +491,7 @@ export function SessionAssistant({
             <button
               key={action.label}
               onClick={() => handleQuickAction(action.label)}
-              className="px-3 py-1.5 rounded-lg bg-secondary/50 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg bg-secondary/50 text-xs text-foreground/70 hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-1.5"
             >
               <action.icon className="w-3 h-3" />
               {action.label}
