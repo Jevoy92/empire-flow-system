@@ -223,7 +223,7 @@ export default function History() {
     } else {
       setSessions((data || []).map(session => ({
         ...session,
-        tasks: (session.tasks as SessionTask[]) || []
+        tasks: (session.tasks as unknown as SessionTask[]) || []
       })));
     }
     setLoading(false);

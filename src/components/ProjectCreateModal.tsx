@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Plus, GripVertical, Trash2, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { categories, workTypesByCategory } from '@/data/ventures';
 import { ProjectTemplate, ProjectStage } from '@/pages/Workflows';
 import {
@@ -100,24 +101,24 @@ export function ProjectCreateModal({ isOpen, onClose, onCreated, templates }: Pr
 
       // Save as template if requested
       if (saveAsTemplate && templateName.trim()) {
-        await supabase.from('project_templates').insert({
+        await supabase.from('project_templates').insert([{
           user_id: user.id,
           name: templateName.trim(),
           description: description || null,
           default_venture: venture,
-          stages: preparedStages,
-        });
+          stages: preparedStages as unknown as Json,
+        }]);
       }
 
       // Create project
-      await supabase.from('projects').insert({
+      await supabase.from('projects').insert([{
         user_id: user.id,
         name: name.trim(),
         description: description || null,
         venture,
-        stages: preparedStages,
+        stages: preparedStages as unknown as Json,
         project_template_id: selectedTemplateId,
-      });
+      }]);
 
       onCreated();
     } catch (err) {
