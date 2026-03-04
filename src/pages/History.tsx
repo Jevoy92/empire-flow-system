@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { SessionDetailPanel } from '@/components/history/SessionDetailPanel';
 
 interface SessionTask {
   id: string;
@@ -91,26 +92,11 @@ export default function History() {
       setLoading(false);
     } else {
       loadSessions();
-
-      // Set up realtime subscription
       const channel = supabase
         .channel('sessions-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'sessions'
-          },
-          () => {
-            loadSessions();
-          }
-        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => loadSessions())
         .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
+      return () => { supabase.removeChannel(channel); };
     }
   }, [isDemo, demo, page]);
 
@@ -136,14 +122,12 @@ export default function History() {
   };
 
   const startSimilar = (session: Session) => {
-    // If a session is already active, always restore it instead of starting setup.
     if (isActive) {
       sessionStorage.removeItem('prefill');
       restoreSession();
       navigate('/session' + demoSuffix);
       return;
     }
-
     sessionStorage.setItem('prefill', JSON.stringify({
       venture: session.venture,
       workType: session.work_type,
@@ -166,8 +150,7 @@ export default function History() {
     const startTime = format(start, 'h:mm a');
     if (completedAt) {
       const end = parseISO(completedAt);
-      const endTime = format(end, 'h:mm a');
-      return `${startTime} - ${endTime}`;
+      return `${startTime} - ${format(end, 'h:mm a')}`;
     }
     return startTime;
   };
@@ -185,7 +168,6 @@ export default function History() {
     const remaining = typeof task.timerRemainingSeconds === 'number'
       ? Math.max(0, task.timerRemainingSeconds)
       : (task.completed ? 0 : total);
-
     const spentSeconds = task.completed ? total : Math.max(0, total - remaining);
     return Math.round(spentSeconds / 60);
   };
@@ -232,22 +214,16 @@ export default function History() {
       acc[dateKey].push(session);
       return acc;
     }, {} as Record<string, Session[]>);
-
     return Object.entries(groups);
   }, [sessions]);
+
   const totalPages = Math.max(1, Math.ceil(totalSessions / PAGE_SIZE));
 
   useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
+    if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
 
-  const sessionTaskBreakdown = selectedSession
-    ? getTaskBreakdown(selectedSession)
-    : [];
   const desktopSession = selectedSession || sessions[0] || null;
-  const desktopTaskBreakdown = desktopSession ? getTaskBreakdown(desktopSession) : [];
 
   const handleSessionAction = (session: Session) => {
     if (isActive) {
@@ -256,8 +232,14 @@ export default function History() {
       navigate('/session' + demoSuffix);
       return;
     }
-
     setSelectedSession(session);
+  };
+
+  const handleResumeActive = () => {
+    if (!isActive) return;
+    sessionStorage.removeItem('prefill');
+    restoreSession();
+    navigate('/session' + demoSuffix);
   };
 
   const reveal = (delay = 0) =>
@@ -291,9 +273,7 @@ export default function History() {
           <motion.div className="card-elevated p-8 text-center" {...reveal(0.12)}>
             <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">No sessions yet.</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Complete a work session to see it here.
-            </p>
+            <p className="text-sm text-muted-foreground mt-1">Complete a work session to see it here.</p>
           </motion.div>
         ) : (
           <motion.div className="grid grid-cols-1 xl:grid-cols-12 gap-6" {...reveal(0.12)}>
@@ -332,8 +312,6 @@ export default function History() {
                           className={`group relative overflow-hidden rounded-2xl border p-3 pl-4 flex items-center gap-3 cursor-pointer ${tone.bg} ${tone.border} hover:border-primary/40 transition-all shadow-sm hover:shadow-md`}
                         >
                           <div className={`absolute left-0 inset-y-0 w-1 ${tone.accent}`} />
-
-                          {/* Category Icon */}
                           <div className={`w-10 h-10 rounded-xl ${colorClass} flex items-center justify-center flex-shrink-0`}>
                             {session.status === 'completed' ? (
                               <CheckCircle className="w-5 h-5 text-white" />
@@ -343,8 +321,6 @@ export default function History() {
                               <Clock className="w-5 h-5 text-white" />
                             )}
                           </div>
-
-                          {/* Session Info */}
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-foreground text-sm truncate group-hover:text-foreground">
                               {session.focus}
@@ -361,8 +337,6 @@ export default function History() {
                               </span>
                             </div>
                           </div>
-
-                          {/* Duration & Time */}
                           <div className="text-right flex-shrink-0">
                             <div className="text-sm font-semibold text-foreground">
                               {formatDuration(session.duration_minutes)}
@@ -371,21 +345,12 @@ export default function History() {
                               {totalTasks > 0 && `${completedTasks}/${totalTasks}`}
                             </div>
                           </div>
-
-                          {/* Action Button */}
                           <button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleSessionAction(session);
-                            }}
+                            onClick={(event) => { event.stopPropagation(); handleSessionAction(session); }}
                             className="w-9 h-9 rounded-full bg-secondary/80 border border-border/70 flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors flex-shrink-0"
                             title={isActive ? "Resume active session" : "View session details"}
                           >
-                            {isActive ? (
-                              <Play className="w-4 h-4 ml-0.5" />
-                            ) : (
-                              <Eye className="w-4 h-4" />
-                            )}
+                            {isActive ? <Play className="w-4 h-4 ml-0.5" /> : <Eye className="w-4 h-4" />}
                           </button>
                         </div>
                       );
@@ -395,112 +360,28 @@ export default function History() {
               ))}
             </motion.div>
 
+            {/* Desktop sidebar */}
             <motion.aside className="hidden xl:block xl:col-span-5" {...reveal(0.2)}>
               <div className="sticky top-24 card-elevated p-4 border border-border/80">
                 {desktopSession ? (
-                  <>
-                    <h2 className="text-lg font-semibold text-foreground truncate">{desktopSession.focus}</h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {getVentureLabel(desktopSession.venture)} • {desktopSession.work_type}
-                    </p>
-
-                    <div className="grid grid-cols-3 gap-2 mt-4">
-                      <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</p>
-                        <p className="text-sm font-semibold text-foreground mt-1">{formatDuration(desktopSession.duration_minutes)}</p>
-                      </div>
-                      <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Tasks</p>
-                        <p className="text-sm font-semibold text-foreground mt-1">
-                          {desktopSession.tasks.filter((task) => task.completed).length}/{desktopSession.tasks.length}
-                        </p>
-                      </div>
-                      <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Status</p>
-                        <p className="text-sm font-semibold capitalize text-foreground mt-1">{desktopSession.status}</p>
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border border-border bg-secondary/20 p-3 text-xs text-muted-foreground mt-3">
-                      <div className="flex items-center gap-2">
-                        <Timer className="w-3.5 h-3.5" />
-                        <span>{formatSessionTime(desktopSession.started_at, desktopSession.completed_at)}</span>
-                      </div>
-                      {desktopSession.completion_condition && (
-                        <div className="mt-1.5">
-                          Done when: <span className="text-foreground/90">{desktopSession.completion_condition}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <ListChecks className="w-4 h-4 text-muted-foreground" />
-                        <h3 className="font-medium text-foreground">Task Breakdown</h3>
-                      </div>
-
-                      {desktopTaskBreakdown.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No tasks were captured for this session.</p>
-                      ) : (
-                        <div className="space-y-2 max-h-[24rem] overflow-y-auto pr-1">
-                          {desktopTaskBreakdown.map((task) => (
-                            <div key={task.id} className="rounded-lg border border-border bg-card p-3">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex items-start gap-2 min-w-0">
-                                  {task.completed ? (
-                                    <CheckCircle className="w-4 h-4 mt-0.5 text-[hsl(var(--status-active))] shrink-0" />
-                                  ) : (
-                                    <Circle className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
-                                  )}
-                                  <div className="min-w-0">
-                                    <p className={`text-sm ${task.completed ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                      {task.text}
-                                    </p>
-                                    {task.subtasksTotal > 0 && (
-                                      <p className="text-xs text-muted-foreground mt-0.5">
-                                        {task.subtasksCompleted}/{task.subtasksTotal} subtasks
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="text-right shrink-0">
-                                  <p className="text-sm font-semibold text-foreground">
-                                    {task.minutes !== null ? `${task.minutes}m` : 'n/a'}
-                                  </p>
-                                  {task.isEstimated && (
-                                    <p className="text-[10px] text-[hsl(var(--status-warning))]">estimated</p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2 pt-3">
-                      <button
-                        onClick={() => startSimilar(desktopSession)}
-                        className="btn-secondary flex-1 flex items-center justify-center gap-2"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        Start Similar
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (!isActive) return;
-                          sessionStorage.removeItem('prefill');
-                          restoreSession();
-                          navigate('/session' + demoSuffix);
-                        }}
-                        disabled={!isActive}
-                        className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        <Play className="w-4 h-4" />
-                        Resume Active
-                      </button>
-                    </div>
-                  </>
+                  <SessionDetailPanel
+                    focus={desktopSession.focus}
+                    ventureLabel={getVentureLabel(desktopSession.venture)}
+                    workType={desktopSession.work_type}
+                    durationMinutes={desktopSession.duration_minutes}
+                    completedTaskCount={desktopSession.tasks.filter(t => t.completed).length}
+                    totalTaskCount={desktopSession.tasks.length}
+                    status={desktopSession.status}
+                    startedAt={desktopSession.started_at}
+                    completedAt={desktopSession.completed_at}
+                    completionCondition={desktopSession.completion_condition}
+                    taskBreakdown={getTaskBreakdown(desktopSession)}
+                    formatDuration={formatDuration}
+                    formatSessionTime={formatSessionTime}
+                    onStartSimilar={() => startSimilar(desktopSession)}
+                    onResumeActive={handleResumeActive}
+                    isActive={isActive}
+                  />
                 ) : (
                   <div className="text-sm text-muted-foreground">Select a session to view details.</div>
                 )}
@@ -515,25 +396,14 @@ export default function History() {
               Page {page} of {totalPages} • {totalSessions} total sessions
             </p>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                disabled={page <= 1}
-                className="btn-secondary px-3 py-1.5 disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={page >= totalPages}
-                className="btn-secondary px-3 py-1.5 disabled:opacity-50"
-              >
-                Next
-              </button>
+              <button onClick={() => setPage(prev => Math.max(1, prev - 1))} disabled={page <= 1} className="btn-secondary px-3 py-1.5 disabled:opacity-50">Previous</button>
+              <button onClick={() => setPage(prev => Math.min(totalPages, prev + 1))} disabled={page >= totalPages} className="btn-secondary px-3 py-1.5 disabled:opacity-50">Next</button>
             </div>
           </div>
         )}
       </motion.div>
 
+      {/* Mobile modal */}
       <Dialog open={!isDesktop && Boolean(selectedSession)} onOpenChange={(open) => !open && setSelectedSession(null)}>
         <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
           {selectedSession && (
@@ -544,107 +414,24 @@ export default function History() {
                   {getVentureLabel(selectedSession.venture)} • {selectedSession.work_type}
                 </DialogDescription>
               </DialogHeader>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</p>
-                  <p className="text-sm font-semibold text-foreground mt-1">{formatDuration(selectedSession.duration_minutes)}</p>
-                </div>
-                <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Tasks</p>
-                  <p className="text-sm font-semibold text-foreground mt-1">
-                    {selectedSession.tasks.filter((task) => task.completed).length}/{selectedSession.tasks.length}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Status</p>
-                  <p className="text-sm font-semibold capitalize text-foreground mt-1">{selectedSession.status}</p>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-border bg-secondary/20 p-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Timer className="w-3.5 h-3.5" />
-                  <span>{formatSessionTime(selectedSession.started_at, selectedSession.completed_at)}</span>
-                </div>
-                {selectedSession.completion_condition && (
-                  <div className="mt-1.5">
-                    Done when: <span className="text-foreground/90">{selectedSession.completion_condition}</span>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <ListChecks className="w-4 h-4 text-muted-foreground" />
-                  <h3 className="font-medium text-foreground">Task Breakdown</h3>
-                </div>
-
-                {sessionTaskBreakdown.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No tasks were captured for this session.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {sessionTaskBreakdown.map((task) => (
-                      <div key={task.id} className="rounded-lg border border-border bg-card p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-2 min-w-0">
-                            {task.completed ? (
-                              <CheckCircle className="w-4 h-4 mt-0.5 text-[hsl(var(--status-active))] shrink-0" />
-                            ) : (
-                              <Circle className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
-                            )}
-                            <div className="min-w-0">
-                              <p className={`text-sm ${task.completed ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                {task.text}
-                              </p>
-                              {task.subtasksTotal > 0 && (
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  {task.subtasksCompleted}/{task.subtasksTotal} subtasks
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-sm font-semibold text-foreground">
-                              {task.minutes !== null ? `${task.minutes}m` : 'n/a'}
-                            </p>
-                            {task.isEstimated && (
-                              <p className="text-[10px] text-[hsl(var(--status-warning))]">estimated</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={() => {
-                    startSimilar(selectedSession);
-                    setSelectedSession(null);
-                  }}
-                  className="btn-secondary flex-1 flex items-center justify-center gap-2"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Start Similar
-                </button>
-                <button
-                  onClick={() => {
-                    if (!isActive) return;
-                    sessionStorage.removeItem('prefill');
-                    restoreSession();
-                    setSelectedSession(null);
-                    navigate('/session' + demoSuffix);
-                  }}
-                  disabled={!isActive}
-                  className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <Play className="w-4 h-4" />
-                  Resume Active
-                </button>
-              </div>
+              <SessionDetailPanel
+                focus={selectedSession.focus}
+                ventureLabel={getVentureLabel(selectedSession.venture)}
+                workType={selectedSession.work_type}
+                durationMinutes={selectedSession.duration_minutes}
+                completedTaskCount={selectedSession.tasks.filter(t => t.completed).length}
+                totalTaskCount={selectedSession.tasks.length}
+                status={selectedSession.status}
+                startedAt={selectedSession.started_at}
+                completedAt={selectedSession.completed_at}
+                completionCondition={selectedSession.completion_condition}
+                taskBreakdown={getTaskBreakdown(selectedSession)}
+                formatDuration={formatDuration}
+                formatSessionTime={formatSessionTime}
+                onStartSimilar={() => { startSimilar(selectedSession); setSelectedSession(null); }}
+                onResumeActive={() => { handleResumeActive(); setSelectedSession(null); }}
+                isActive={isActive}
+              />
             </>
           )}
         </DialogContent>
