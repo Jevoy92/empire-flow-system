@@ -39,9 +39,14 @@ export default function Session() {
   // Initialize session from location state or restore from context
   useEffect(() => {
     const initSession = async () => {
-      // If we have an active minimized session, restore it
+      const state = location.state as LocationState | null;
+
+      // If we have an active minimized session, only restore when opening /session
+      // without navigation state (e.g. returning from the floating mini pill)
       if (isActive && isMinimized) {
-        restoreSession();
+        if (!state) {
+          restoreSession();
+        }
         return;
       }
 
@@ -51,7 +56,6 @@ export default function Session() {
       }
 
       // Get config from navigation state
-      const state = location.state as LocationState | null;
       if (!state) {
         navigate('/');
         return;
