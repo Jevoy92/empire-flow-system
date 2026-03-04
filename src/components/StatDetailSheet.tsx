@@ -322,7 +322,7 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
           </>
         );
 
-      case 'time':
+      case 'time': {
         const hours = Math.floor(stats.total_minutes_worked / 60);
         const funFact = hours >= 2 
           ? `That's about ${Math.round(hours / 2)} movies worth of focus!`
@@ -368,8 +368,9 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
             </div>
           </>
         );
+      }
 
-      case 'streak':
+      case 'streak': {
         const streakMessage = stats.current_streak === 0
           ? "Start a session today to begin your streak!"
           : stats.current_streak >= 7
@@ -421,6 +422,7 @@ export default function StatDetailSheet({ open, onOpenChange, type, stats }: Sta
             </div>
           </>
         );
+      }
 
       case 'projects':
         return (

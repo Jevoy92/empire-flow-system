@@ -15,6 +15,10 @@ interface Task {
   id: string;
   text: string;
   completed: boolean;
+  timerDurationSeconds?: number;
+  timerRemainingSeconds?: number;
+  timerStatus?: 'idle' | 'running' | 'paused' | 'done';
+  timerCompletedAt?: string | null;
 }
 
 interface SessionContext {
@@ -61,6 +65,9 @@ You can take actions on the task list by including ACTION blocks in your respons
 1. ADD TASKS:
 [ACTION]{"type":"add_tasks","tasks":["Task 1","Task 2"]}[/ACTION]
 
+1b. ADD TASKS WITH SUBTASKS:
+[ACTION]{"type":"add_task_tree","tasks":[{"text":"Design homepage","subtasks":["Define layout","Create first draft","Review spacing"]},{"text":"Write hero copy","subtasks":["Draft headline","Draft subheadline","Polish CTA"]}]}[/ACTION]
+
 2. COMPLETE TASKS (by matching text, partial match OK):
 [ACTION]{"type":"complete_tasks","matches":["task text to match"]}[/ACTION]
 
@@ -70,6 +77,17 @@ You can take actions on the task list by including ACTION blocks in your respons
 4. UPDATE TASK TEXT:
 [ACTION]{"type":"update_task","match":"old text","newText":"new text"}[/ACTION]
 
+5. SET A TASK TIMER (minutes):
+[ACTION]{"type":"set_task_timer","match":"task text","minutes":25,"autoStart":true}[/ACTION]
+
+6. START TASK TIMERS (specific matches or all when omitted):
+[ACTION]{"type":"start_task_timers","matches":["outline","editing"]}[/ACTION]
+[ACTION]{"type":"start_task_timers"}[/ACTION]
+
+7. PAUSE TASK TIMERS:
+[ACTION]{"type":"pause_task_timers","matches":["editing"]}[/ACTION]
+[ACTION]{"type":"pause_task_timers"}[/ACTION]
+
 GUIDELINES:
 - Keep responses SHORT (1-2 sentences max)
 - Reference past sessions when relevant: "Last time you did X, you found Y helpful"
@@ -77,7 +95,10 @@ GUIDELINES:
 - When adding tasks, make them specific and actionable
 - If user says something is "done" or "finished", complete that task
 - If user wants to add something, add it immediately
+- Prefer "add_task_tree" when the user asks for a plan, breakdown, roadmap, or steps
 - Match task text loosely - partial matches are fine
+- If user gives durations ("25 minutes", "15m"), set timers for those tasks
+- If user asks to run multiple timed tasks, set timers and start them
 - Don't ask permission to take action - just do it
 - If user seems stuck or distracted, gently redirect to the next smallest step
 - Track patterns: if user mentions something worked well or was hard, acknowledge it
@@ -93,8 +114,17 @@ You: "Nice! Moving on 💪 [ACTION]{"type":"complete_tasks","matches":["color"]}
 User: "I need to email Sarah about the deadline"
 You: "Added to your list! [ACTION]{"type":"add_tasks","tasks":["Email Sarah about deadline"]}[/ACTION]"
 
+User: "Break this into tasks and subtasks for launching the homepage"
+You: "Planned it out. [ACTION]{"type":"add_task_tree","tasks":[{"text":"Finalize homepage scope","subtasks":["Confirm audience and offer","Define success criteria","List required assets"]},{"text":"Build homepage draft","subtasks":["Create layout sections","Write initial copy","Add visuals"]},{"text":"Review and publish homepage","subtasks":["QA mobile and desktop","Fix issues","Publish and verify live"]}]}[/ACTION]"
+
 User: "actually change that to call Sarah instead"
 You: "Updated! [ACTION]{"type":"update_task","match":"Email Sarah","newText":"Call Sarah about deadline"}[/ACTION]"
+
+User: "set 25 minutes for draft homepage and start it"
+You: "Timer set and running. [ACTION]{"type":"set_task_timer","match":"draft homepage","minutes":25,"autoStart":true}[/ACTION]"
+
+User: "start timers for outline and rough edit"
+You: "Running both timers now. [ACTION]{"type":"start_task_timers","matches":["outline","rough edit"]}[/ACTION]"
 
 User: "I'm getting distracted"
 You: "Happens to everyone. What's the smallest next step you can take right now?"`;
@@ -157,7 +187,11 @@ serve(async (req) => {
     // Build task list for context
     const taskList = sessionContext.tasks.length > 0
       ? sessionContext.tasks.map((t, i) => 
-          `  ${i + 1}. [${t.completed ? "✓" : " "}] ${t.text}`
+          `  ${i + 1}. [${t.completed ? "✓" : " "}] ${t.text}${
+            typeof t.timerRemainingSeconds === 'number'
+              ? ` (timer: ${t.timerRemainingSeconds}s, status: ${t.timerStatus || 'idle'})`
+              : ''
+          }`
         ).join("\n")
       : "  (no tasks yet)";
 

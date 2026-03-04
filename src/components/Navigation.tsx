@@ -30,7 +30,78 @@ export function Navigation() {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-bottom">
+      <nav className="hidden md:block sticky top-0 z-50 bg-background/85 backdrop-blur border-b border-border/80">
+        <div className="max-w-7xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-6 py-2.5 gap-4">
+          <div className="text-sm font-semibold text-foreground/90 tracking-tight">
+            Empire Flow
+          </div>
+
+          <div className="rounded-full border border-border bg-card p-1 shadow-sm">
+            <div className="flex items-center gap-1">
+              <Link
+                to={`/${demoSuffix}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
+                  location.pathname === '/'
+                    ? 'text-primary bg-primary/12'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                }`}
+              >
+                <Home className="w-3.5 h-3.5" />
+                Home
+              </Link>
+
+              <Link
+                to={`/history${demoSuffix}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
+                  location.pathname === '/history'
+                    ? 'text-primary bg-primary/12'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                }`}
+              >
+                <History className="w-3.5 h-3.5" />
+                History
+              </Link>
+
+              <Link
+                to={`/workflows${demoSuffix}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
+                  isWorkflowsActive
+                    ? 'text-primary bg-primary/12'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                Workflows
+              </Link>
+
+              <Link
+                to={`/settings${demoSuffix}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
+                  location.pathname === '/settings'
+                    ? 'text-primary bg-primary/12'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+                }`}
+              >
+                <Settings className="w-3.5 h-3.5" />
+                Settings
+              </Link>
+            </div>
+          </div>
+
+          <div className="justify-self-end">
+            <button
+              onClick={() => setIsAIOpen(true)}
+              className="btn-primary h-10 px-4 text-sm flex items-center gap-2"
+              aria-label="Open AI Assistant"
+            >
+              <Sparkles className="w-4 h-4" />
+              AI Assistant
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-bottom">
         <div className="max-w-lg mx-auto flex items-center justify-between px-6 py-2 relative">
           {/* Home */}
           <Link

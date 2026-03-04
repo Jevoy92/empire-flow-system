@@ -5,6 +5,11 @@ export interface Task {
   id: string;
   text: string;
   completed: boolean;
+  subtasks?: { id: string; text: string; completed: boolean }[];
+  timerDurationSeconds?: number;
+  timerRemainingSeconds?: number;
+  timerStatus?: 'idle' | 'running' | 'paused' | 'done';
+  timerCompletedAt?: string | null;
 }
 
 export interface SessionConfig {

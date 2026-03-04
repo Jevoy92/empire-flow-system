@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { buildWorkflowDraftFromInput } from '@/lib/workflow-planner';
 
 interface AICommandCenterProps {
   isOpen: boolean;
@@ -15,6 +16,11 @@ interface Message {
   content: string;
 }
 
+interface AIAction {
+  type: string;
+  payload?: Record<string, unknown>;
+}
+
 export function AICommandCenter({ isOpen, onClose }: AICommandCenterProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,6 +30,8 @@ export function AICommandCenter({ isOpen, onClose }: AICommandCenterProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { isRecording, startRecording, stopRecording, partialText, isProcessing } = useVoiceRecorder();
+  const isDemo = location.search.includes('demo=1');
+  const demoSuffix = isDemo ? '?demo=1' : '';
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -74,8 +82,14 @@ export function AICommandCenter({ isOpen, onClose }: AICommandCenterProps) {
       setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
 
       // Handle navigation commands from AI response
-      if (response.data?.action) {
-        handleAIAction(response.data.action);
+      const responseAction = response.data?.action;
+      if (
+        responseAction &&
+        typeof responseAction === 'object' &&
+        'type' in responseAction &&
+        typeof responseAction.type === 'string'
+      ) {
+        handleAIAction(responseAction as AIAction);
       }
     } catch (error) {
       console.error('AI Command error:', error);
@@ -88,15 +102,32 @@ export function AICommandCenter({ isOpen, onClose }: AICommandCenterProps) {
     }
   };
 
-  const handleAIAction = (action: { type: string; payload?: any }) => {
+  const handleAIAction = (action: AIAction) => {
     switch (action.type) {
       case 'navigate':
         onClose();
-        navigate(action.payload?.path || '/');
+        navigate(typeof action.payload?.path === 'string' ? action.payload.path : '/' + demoSuffix);
         break;
       case 'start_session':
+        {
+          const rawFocus = typeof action.payload?.focus === 'string'
+            ? action.payload.focus
+            : messages[messages.length - 1]?.content || 'AI Planned Sprint';
+          const venture = typeof action.payload?.venture === 'string' ? action.payload.venture : 'daily-maintenance';
+          const workType = typeof action.payload?.workType === 'string' ? action.payload.workType : 'AI Planned Sprint';
+          const draft = buildWorkflowDraftFromInput(rawFocus, { venture, workType });
+
+          onClose();
+          navigate('/workflow-review' + demoSuffix, {
+            state: {
+              draft,
+              source: 'input',
+            },
+          });
+        }
+        break;
+      default:
         onClose();
-        navigate('/', { state: { autoStart: true, ...action.payload } });
         break;
     }
   };
@@ -105,15 +136,15 @@ export function AICommandCenter({ isOpen, onClose }: AICommandCenterProps) {
     switch (action) {
       case 'home':
         onClose();
-        navigate('/');
+        navigate('/' + demoSuffix);
         break;
       case 'history':
         onClose();
-        navigate('/history');
+        navigate('/history' + demoSuffix);
         break;
       case 'templates':
         onClose();
-        navigate('/templates');
+        navigate('/templates' + demoSuffix);
         break;
       case 'start':
         setInputText("Start a new work session");

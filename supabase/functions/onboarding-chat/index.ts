@@ -22,6 +22,8 @@ CRITICAL RULES:
 4. Create ventures (categories) for each distinct area of the user's life/work.
 5. Be GENEROUS with generation - create 5-10 templates minimum from any reasonable input.
 6. ONLY use venture types "personal" or "project" - NEVER use "business".
+7. When the user mentions larger outcomes, create at least one [PROJECT] with multiple stages.
+8. Keep venture names consistent. Template/project venture names must exactly match one generated venture.
 
 OUTPUT FORMAT:
 

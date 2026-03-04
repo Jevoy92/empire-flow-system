@@ -40,11 +40,11 @@ export function DeleteAccountDialog({ open, onOpenChange, userEmail, onDeleted }
       
       toast({ title: 'Account deleted successfully' });
       onDeleted();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({ 
         variant: 'destructive', 
         title: 'Failed to delete account',
-        description: error.message 
+        description: error instanceof Error ? error.message : 'Unknown error'
       });
     } finally {
       setIsDeleting(false);

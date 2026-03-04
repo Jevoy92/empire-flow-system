@@ -32,6 +32,12 @@ interface DigestData {
   notes: NoteSummary[];
 }
 
+const isSessionTask = (value: unknown): value is { text: string; completed: boolean } => {
+  if (!value || typeof value !== 'object') return false;
+  const task = value as { text?: unknown; completed?: unknown };
+  return typeof task.text === 'string' && typeof task.completed === 'boolean';
+};
+
 export function DailyDigest() {
   const [digest, setDigest] = useState<DigestData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -125,8 +131,8 @@ export function DailyDigest() {
       const sessionSummaries: SessionSummary[] = [];
 
       (sessions || []).forEach((session) => {
-        const tasks = Array.isArray(session.tasks) ? session.tasks : [];
-        const completedTasks = tasks.filter((t: any) => t.completed);
+        const tasks = Array.isArray(session.tasks) ? session.tasks.filter(isSessionTask) : [];
+        const completedTasks = tasks.filter((t) => t.completed);
         tasksCompleted += completedTasks.length;
         totalMinutes += session.duration_minutes || 0;
 
@@ -136,7 +142,7 @@ export function DailyDigest() {
           venture: session.venture,
           work_type: session.work_type,
           duration_minutes: session.duration_minutes,
-          tasks: tasks as { text: string; completed: boolean }[],
+          tasks,
         });
       });
 

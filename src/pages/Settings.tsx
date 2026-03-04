@@ -258,147 +258,302 @@ export default function Settings() {
     sessionDuration !== (settings?.default_session_duration || 25);
 
   return (
-    <div className="min-h-dvh bg-background p-6 pb-24 overflow-y-auto">
-      <div className="max-w-lg mx-auto">
+    <div className="min-h-dvh bg-background px-4 py-6 pb-24 md:px-6 md:pb-10">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/' + demoSuffix)}
             className="p-2 rounded-lg hover:bg-muted transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+            <p className="text-sm text-muted-foreground mt-1">Profile, preferences, and account controls.</p>
+          </div>
         </div>
 
-        {/* Demo Mode Banner */}
-        {isDemo && (
-          <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-primary mt-0.5" />
-              <div>
-                <p className="font-medium text-foreground">Demo Mode</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  You're exploring with sample data. Sign up to save your progress and unlock all features!
-                </p>
-                <Button 
-                  size="sm" 
-                  className="mt-3"
-                  onClick={() => navigate('/auth')}
-                >
-                  Sign Up Free
-                </Button>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          <div className="xl:col-span-7 space-y-6">
+            {/* Demo Mode Banner */}
+            {isDemo && (
+              <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Demo Mode</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      You're exploring with sample data. Sign up to save your progress and unlock all features!
+                    </p>
+                    <Button
+                      size="sm"
+                      className="mt-3"
+                      onClick={() => navigate('/auth')}
+                    >
+                      Sign Up Free
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* Profile Hero */}
-        <div className="relative p-6 rounded-2xl bg-primary/5 border border-primary/20 mb-6">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => !isDemo && setShowAvatarPicker(true)}
-              className={`relative group ${isDemo ? 'cursor-default' : ''}`}
-              disabled={isDemo}
-            >
-              {getAvatarDisplay()}
-              {!isDemo && (
-                <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <Camera className="w-5 h-5 text-white" />
+            {/* Profile Hero */}
+            <div className="relative p-6 rounded-2xl bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => !isDemo && setShowAvatarPicker(true)}
+                  className={`relative group ${isDemo ? 'cursor-default' : ''}`}
+                  disabled={isDemo}
+                >
+                  {getAvatarDisplay()}
+                  {!isDemo && (
+                    <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <Camera className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+                </button>
+                <div className="flex-1 min-w-0">
+                  {isEditing && !isDemo ? (
+                    <Input
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="Your name"
+                      className="font-semibold text-lg mb-1"
+                      autoFocus
+                    />
+                  ) : (
+                    <h2 className="text-xl font-semibold text-foreground truncate">
+                      {isDemo ? displayedProfile?.display_name : displayName || 'Set your name'}
+                    </h2>
+                  )}
+                  <p className="text-sm text-muted-foreground truncate">
+                    {isDemo ? 'demo@example.com' : user?.email}
+                  </p>
+                  {/* Show character motivation */}
+                  {avatarUrl?.startsWith('character:') && (() => {
+                    const charId = avatarUrl.replace('character:', '');
+                    const char = characterAvatars.find(c => c.id === charId);
+                    return char ? (
+                      <p className="text-xs text-primary/80 italic mt-1">"{char.motivation}"</p>
+                    ) : null;
+                  })()}
+                </div>
+                {!isEditing && !isDemo && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors"
+                  >
+                    <User className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+              {isEditing && !isDemo && (
+                <div className="flex gap-2 mt-4">
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setIsEditing(false);
+                    setDisplayName(profile?.display_name || '');
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+                  </Button>
                 </div>
               )}
-            </button>
-            <div className="flex-1 min-w-0">
-              {isEditing && !isDemo ? (
-                <Input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Your name"
-                  className="font-semibold text-lg mb-1"
-                  autoFocus
-                />
-              ) : (
-                <h2 className="text-xl font-semibold text-foreground truncate">
-                  {isDemo ? displayedProfile?.display_name : displayName || 'Set your name'}
-                </h2>
-              )}
-              <p className="text-sm text-muted-foreground truncate">
-                {isDemo ? 'demo@example.com' : user?.email}
-              </p>
-              {/* Show character motivation */}
-              {avatarUrl?.startsWith('character:') && (() => {
-                const charId = avatarUrl.replace('character:', '');
-                const char = characterAvatars.find(c => c.id === charId);
-                return char ? (
-                  <p className="text-xs text-primary/80 italic mt-1">"{char.motivation}"</p>
-                ) : null;
-              })()}
             </div>
-            {!isEditing && !isDemo && (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors"
-              >
-                <User className="w-5 h-5" />
-              </button>
+
+            {/* Avatar Picker */}
+            {user && !isDemo && (
+              <AvatarPicker
+                open={showAvatarPicker}
+                onOpenChange={setShowAvatarPicker}
+                currentAvatar={avatarUrl}
+                userId={user.id}
+                onAvatarChange={handleAvatarChange}
+              />
+            )}
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+              <StatCard
+                icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                label="Sessions"
+                value={displayedStats.total_sessions_completed}
+                bgColor="bg-emerald-500/10"
+                onClick={() => !isDemo && setActiveStatSheet('sessions')}
+              />
+              <StatCard
+                icon={<Clock className="w-4 h-4 text-blue-500" />}
+                label="Time Focused"
+                value={formatTime(displayedStats.total_minutes_worked)}
+                bgColor="bg-blue-500/10"
+                onClick={() => !isDemo && setActiveStatSheet('time')}
+              />
+              <StatCard
+                icon={<Flame className="w-4 h-4 text-orange-500" />}
+                label="Day Streak"
+                value={displayedStats.current_streak}
+                bgColor="bg-orange-500/10"
+                onClick={() => !isDemo && setActiveStatSheet('streak')}
+              />
+              <StatCard
+                icon={<FolderKanban className="w-4 h-4 text-violet-500" />}
+                label="Projects Done"
+                value={displayedStats.projects_completed}
+                bgColor="bg-violet-500/10"
+                onClick={() => !isDemo && setActiveStatSheet('projects')}
+              />
+            </div>
+
+            {/* Achievements Preview */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <button className="w-full p-4 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors text-left">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-5 h-5 text-primary" />
+                      <span className="font-medium text-foreground">Achievements</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>{demoUnlockedCount}/{demoTotalCount}</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <Progress value={demoProgressPercentage} className="h-2 mb-3" />
+
+                  {recentlyUnlocked.length > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Recent:</span>
+                      <div className="flex gap-1">
+                        {recentlyUnlocked.map(a => (
+                          <span key={a.id} className="text-lg" title={a.name}>{a.icon}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Complete sessions to unlock achievements!
+                    </p>
+                  )}
+                </button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
+                <SheetHeader className="mb-4">
+                  <SheetTitle className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-primary" />
+                    Your Journey
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="overflow-y-auto h-[calc(100%-60px)] pb-8">
+                  <AchievementsPanel />
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          <div className="xl:col-span-5 xl:sticky xl:top-24 h-fit space-y-6">
+            {/* Preferences */}
+            <div className="p-4 rounded-2xl bg-card border border-border">
+              <h3 className="font-medium text-foreground mb-4">Preferences</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">Theme</span>
+                  </div>
+                  <Select value={theme} onValueChange={handleThemeChange}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="system">System</SelectItem>
+                      <SelectItem value="light">Light</SelectItem>
+                      <SelectItem value="dark">Dark</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <Timer className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">Session Duration</span>
+                  </div>
+                  <Select
+                    value={sessionDuration.toString()}
+                    onValueChange={(v) => setSessionDuration(parseInt(v))}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 min</SelectItem>
+                      <SelectItem value="25">25 min</SelectItem>
+                      <SelectItem value="30">30 min</SelectItem>
+                      <SelectItem value="45">45 min</SelectItem>
+                      <SelectItem value="60">60 min</SelectItem>
+                      <SelectItem value="90">90 min</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {hasChanges && !isEditing && !isDemo && (
+                <Button onClick={handleSave} disabled={isSaving} className="w-full mt-4">
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Save Preferences
+                </Button>
+              )}
+            </div>
+
+            {/* Account Section */}
+            <div className="p-4 rounded-2xl bg-card border border-border">
+              <h3 className="font-medium text-foreground mb-4">Account</h3>
+              <div className="space-y-2">
+                {!isDemo && (
+                  <button
+                    onClick={() => setShowChangePassword(true)}
+                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Lock className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-foreground">Change Password</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                )}
+
+                <button
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
+                  className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <LogOut className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{isDemo ? 'Exit Demo' : 'Sign Out'}</span>
+                  </div>
+                  {isSigningOut && <Loader2 className="w-4 h-4 animate-spin" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Danger Zone - Hidden in Demo */}
+            {!isDemo && (
+              <div className="p-4 rounded-2xl bg-destructive/5 border border-destructive/20">
+                <h3 className="font-medium text-destructive mb-4">Danger Zone</h3>
+                <button
+                  onClick={() => setShowDeleteAccount(true)}
+                  className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-destructive/10 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                    <span className="text-sm text-destructive">Delete Account</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-destructive" />
+                </button>
+              </div>
             )}
           </div>
-          {isEditing && !isDemo && (
-            <div className="flex gap-2 mt-4">
-              <Button variant="ghost" size="sm" onClick={() => {
-                setIsEditing(false);
-                setDisplayName(profile?.display_name || '');
-              }}>
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={isSaving}>
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Avatar Picker */}
-        {user && !isDemo && (
-          <AvatarPicker
-            open={showAvatarPicker}
-            onOpenChange={setShowAvatarPicker}
-            currentAvatar={avatarUrl}
-            userId={user.id}
-            onAvatarChange={handleAvatarChange}
-          />
-        )}
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <StatCard
-            icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
-            label="Sessions"
-            value={displayedStats.total_sessions_completed}
-            bgColor="bg-emerald-500/10"
-            onClick={() => !isDemo && setActiveStatSheet('sessions')}
-          />
-          <StatCard
-            icon={<Clock className="w-4 h-4 text-blue-500" />}
-            label="Time Focused"
-            value={formatTime(displayedStats.total_minutes_worked)}
-            bgColor="bg-blue-500/10"
-            onClick={() => !isDemo && setActiveStatSheet('time')}
-          />
-          <StatCard
-            icon={<Flame className="w-4 h-4 text-orange-500" />}
-            label="Day Streak"
-            value={displayedStats.current_streak}
-            bgColor="bg-orange-500/10"
-            onClick={() => !isDemo && setActiveStatSheet('streak')}
-          />
-          <StatCard
-            icon={<FolderKanban className="w-4 h-4 text-violet-500" />}
-            label="Projects Done"
-            value={displayedStats.projects_completed}
-            bgColor="bg-violet-500/10"
-            onClick={() => !isDemo && setActiveStatSheet('projects')}
-          />
         </div>
 
         {/* Stat Detail Sheets - only for non-demo */}
@@ -431,152 +586,6 @@ export default function Settings() {
           </>
         )}
 
-        {/* Achievements Preview */}
-        <Sheet>
-          <SheetTrigger asChild>
-            <button className="w-full p-4 rounded-2xl bg-card border border-border hover:border-primary/30 transition-colors text-left mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-primary" />
-                  <span className="font-medium text-foreground">Achievements</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>{demoUnlockedCount}/{demoTotalCount}</span>
-                  <ChevronRight className="w-4 h-4" />
-                </div>
-              </div>
-              <Progress value={demoProgressPercentage} className="h-2 mb-3" />
-              
-              {recentlyUnlocked.length > 0 ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Recent:</span>
-                  <div className="flex gap-1">
-                    {recentlyUnlocked.map(a => (
-                      <span key={a.id} className="text-lg" title={a.name}>{a.icon}</span>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Complete sessions to unlock achievements!
-                </p>
-              )}
-            </button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
-            <SheetHeader className="mb-4">
-              <SheetTitle className="flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-primary" />
-                Your Journey
-              </SheetTitle>
-            </SheetHeader>
-            <div className="overflow-y-auto h-[calc(100%-60px)] pb-8">
-              <AchievementsPanel />
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        {/* Preferences */}
-        <div className="p-4 rounded-2xl bg-card border border-border mb-6">
-          <h3 className="font-medium text-foreground mb-4">Preferences</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Palette className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-foreground">Theme</span>
-              </div>
-              <Select value={theme} onValueChange={handleThemeChange}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="system">System</SelectItem>
-                  <SelectItem value="light">Light</SelectItem>
-                  <SelectItem value="dark">Dark</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Timer className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-foreground">Session Duration</span>
-              </div>
-              <Select
-                value={sessionDuration.toString()}
-                onValueChange={(v) => setSessionDuration(parseInt(v))}
-              >
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="15">15 min</SelectItem>
-                  <SelectItem value="25">25 min</SelectItem>
-                  <SelectItem value="30">30 min</SelectItem>
-                  <SelectItem value="45">45 min</SelectItem>
-                  <SelectItem value="60">60 min</SelectItem>
-                  <SelectItem value="90">90 min</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          {hasChanges && !isEditing && !isDemo && (
-            <Button onClick={handleSave} disabled={isSaving} className="w-full mt-4">
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Save Preferences
-            </Button>
-          )}
-        </div>
-
-        {/* Account Section */}
-        <div className="p-4 rounded-2xl bg-card border border-border mb-6">
-          <h3 className="font-medium text-foreground mb-4">Account</h3>
-          <div className="space-y-2">
-            {!isDemo && (
-              <button 
-                onClick={() => setShowChangePassword(true)}
-                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Lock className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-foreground">Change Password</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </button>
-            )}
-            
-            <button 
-              onClick={handleSignOut}
-              disabled={isSigningOut}
-              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <LogOut className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-foreground">{isDemo ? 'Exit Demo' : 'Sign Out'}</span>
-              </div>
-              {isSigningOut && <Loader2 className="w-4 h-4 animate-spin" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Danger Zone - Hidden in Demo */}
-        {!isDemo && (
-          <div className="p-4 rounded-2xl bg-destructive/5 border border-destructive/20">
-            <h3 className="font-medium text-destructive mb-4">Danger Zone</h3>
-            <button 
-              onClick={() => setShowDeleteAccount(true)}
-              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-destructive/10 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Trash2 className="w-4 h-4 text-destructive" />
-                <span className="text-sm text-destructive">Delete Account</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-destructive" />
-            </button>
-          </div>
-        )}
-
         {/* Modals - Only for authenticated users */}
         {!isDemo && (
           <>
@@ -584,7 +593,7 @@ export default function Settings() {
               open={showChangePassword}
               onOpenChange={setShowChangePassword}
             />
-            
+
             {user && (
               <DeleteAccountDialog
                 open={showDeleteAccount}

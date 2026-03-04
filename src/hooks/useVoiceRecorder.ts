@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { pipeline } from '@huggingface/transformers';
-import type { AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UseVoiceRecorderReturn {
   isRecording: boolean;
@@ -12,46 +11,76 @@ interface UseVoiceRecorderReturn {
   isModelLoading: boolean;
 }
 
-// Singleton for the transcription pipeline
-let transcriber: AutomaticSpeechRecognitionPipeline | null = null;
-let isLoadingModel = false;
-let modelLoadPromise: Promise<AutomaticSpeechRecognitionPipeline> | null = null;
-
-async function getTranscriber(): Promise<AutomaticSpeechRecognitionPipeline> {
-  if (transcriber) return transcriber;
-  
-  if (modelLoadPromise) return modelLoadPromise;
-  
-  console.log('Loading Whisper model...');
-  isLoadingModel = true;
-  
-  modelLoadPromise = (async () => {
-    try {
-      // Try WebGPU first
-      const p = await pipeline(
-        'automatic-speech-recognition',
-        'onnx-community/whisper-tiny.en',
-        { device: 'webgpu' }
-      );
-      console.log('Whisper model loaded with WebGPU');
-      transcriber = p as AutomaticSpeechRecognitionPipeline;
-      isLoadingModel = false;
-      return transcriber;
-    } catch (err) {
-      console.log('WebGPU not available, falling back to CPU:', err);
-      const p = await pipeline(
-        'automatic-speech-recognition',
-        'onnx-community/whisper-tiny.en'
-      );
-      console.log('Whisper model loaded with CPU');
-      transcriber = p as AutomaticSpeechRecognitionPipeline;
-      isLoadingModel = false;
-      return transcriber;
-    }
-  })();
-  
-  return modelLoadPromise;
+interface SpeechRecognitionAlternativeLike {
+  transcript: string;
 }
+
+interface SpeechRecognitionResultLike {
+  isFinal: boolean;
+  0: SpeechRecognitionAlternativeLike;
+}
+
+interface SpeechRecognitionEventLike extends Event {
+  resultIndex: number;
+  results: ArrayLike<SpeechRecognitionResultLike>;
+}
+
+interface SpeechRecognitionErrorEventLike extends Event {
+  error?: string;
+}
+
+interface BrowserSpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+  onend: ((event: Event) => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+
+type SpeechRecognitionCtor = new () => BrowserSpeechRecognition;
+
+interface SpeechWindow extends Window {
+  webkitSpeechRecognition?: SpeechRecognitionCtor;
+  SpeechRecognition?: SpeechRecognitionCtor;
+}
+
+const getSpeechRecognitionCtor = (): SpeechRecognitionCtor | null => {
+  if (typeof window === 'undefined') return null;
+  const speechWindow = window as SpeechWindow;
+  return speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition || null;
+};
+
+const toBase64 = async (blob: Blob): Promise<string> => {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = '';
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
+};
+
+const getRecorderMimeType = (): string | undefined => {
+  const preferredMimeTypes = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/ogg;codecs=opus',
+    'audio/wav',
+  ];
+
+  if (typeof MediaRecorder === 'undefined') return undefined;
+
+  return preferredMimeTypes.find((type) => MediaRecorder.isTypeSupported(type));
+};
 
 export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const [isRecording, setIsRecording] = useState(false);
@@ -59,129 +88,206 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const [partialText, setPartialText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isModelLoading, setIsModelLoading] = useState(false);
-  
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const accumulatedTextRef = useRef<string>('');
-  const audioContextRef = useRef<AudioContext | null>(null);
 
-  // Preload the model on mount
-  useEffect(() => {
-    if (!transcriber && !isLoadingModel) {
-      setIsModelLoading(true);
-      getTranscriber()
-        .then(() => setIsModelLoading(false))
-        .catch(() => setIsModelLoading(false));
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const modeRef = useRef<'speech' | 'media' | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const accumulatedTextRef = useRef('');
+  const stopResolveRef = useRef<((value: string | null) => void) | null>(null);
+
+  const cleanupMediaStream = () => {
+    if (!mediaStreamRef.current) return;
+    mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+  };
+
+  const transcribeWithEdgeFunction = useCallback(async (audioBlob: Blob): Promise<string | null> => {
+    try {
+      const base64Audio = await toBase64(audioBlob);
+      const { data, error: invokeError } = await supabase.functions.invoke('voice-to-text', {
+        body: { audio: base64Audio },
+      });
+
+      if (invokeError) {
+        throw new Error(invokeError.message);
+      }
+
+      const text = data && typeof data === 'object' && 'text' in data
+        ? data.text
+        : null;
+
+      return typeof text === 'string' && text.trim() ? text.trim() : null;
+    } catch (err) {
+      console.error('Voice transcription failed:', err);
+      setError('Voice transcription failed. Please try again or type instead.');
+      return null;
     }
   }, []);
 
-  const transcribeAudio = async (audioBlob: Blob): Promise<string | null> => {
-    try {
-      const transcriber = await getTranscriber();
-      
-      // Convert blob to audio URL
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      const result = await transcriber(audioUrl);
-      
-      URL.revokeObjectURL(audioUrl);
-      
-      if (typeof result === 'object' && 'text' in result) {
-        return result.text || null;
+  const startMediaRecording = useCallback(async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaStreamRef.current = stream;
+
+    const mimeType = getRecorderMimeType();
+    const recorder = mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream);
+
+    mediaRecorderRef.current = recorder;
+    chunksRef.current = [];
+    modeRef.current = 'media';
+
+    recorder.ondataavailable = (event: BlobEvent) => {
+      if (event.data.size > 0) {
+        chunksRef.current.push(event.data);
       }
-      
-      return null;
-    } catch (err) {
-      console.error('Transcription error:', err);
-      return null;
+    };
+
+    recorder.start();
+    setIsRecording(true);
+  }, []);
+
+  const startSpeechRecognition = useCallback(() => {
+    const SpeechRecognition = getSpeechRecognitionCtor();
+    if (!SpeechRecognition) {
+      throw new Error('Speech recognition is not available');
     }
-  };
+
+    const recognition = new SpeechRecognition();
+    speechRecognitionRef.current = recognition;
+    modeRef.current = 'speech';
+
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      let stable = accumulatedTextRef.current;
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (!result || !result[0]) continue;
+        const transcript = result[0].transcript.trim();
+        if (!transcript) continue;
+
+        if (result.isFinal) {
+          stable = `${stable} ${transcript}`.trim();
+        } else {
+          interim = `${interim} ${transcript}`.trim();
+        }
+      }
+
+      accumulatedTextRef.current = stable;
+      setPartialText(`${stable} ${interim}`.trim());
+    };
+
+    recognition.onerror = (event) => {
+      if (event.error && event.error !== 'no-speech' && event.error !== 'aborted') {
+        setError(`Voice recognition error: ${event.error}`);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      setIsProcessing(false);
+      modeRef.current = null;
+
+      const finalText = accumulatedTextRef.current.trim() || null;
+      setPartialText(finalText || '');
+
+      if (stopResolveRef.current) {
+        stopResolveRef.current(finalText);
+        stopResolveRef.current = null;
+      }
+    };
+
+    recognition.start();
+    setIsRecording(true);
+  }, []);
 
   const startRecording = useCallback(async () => {
-    console.log('startRecording called');
     try {
       setError(null);
       setPartialText('');
       accumulatedTextRef.current = '';
-      
-      // Ensure model is loaded before starting
-      console.log('Loading model...');
       setIsModelLoading(true);
-      await getTranscriber();
-      setIsModelLoading(false);
-      console.log('Model loaded, requesting mic access...');
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log('Mic access granted');
-      
-      // Use audio/webm for recording
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm',
-      });
-      
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      console.log('Recording started');
-      
+      const SpeechRecognition = getSpeechRecognitionCtor();
+      if (SpeechRecognition) {
+        startSpeechRecognition();
+      } else {
+        await startMediaRecording();
+      }
     } catch (err) {
       console.error('Failed to start recording:', err);
+      setError(err instanceof Error ? err.message : 'Microphone access denied');
+      setIsRecording(false);
+      setIsProcessing(false);
+    } finally {
       setIsModelLoading(false);
-      setError(err instanceof Error ? err.message : 'Microphone access denied. Please allow access in your browser settings.');
     }
-  }, []);
+  }, [startMediaRecording, startSpeechRecognition]);
 
   const stopRecording = useCallback(async (): Promise<string | null> => {
-    return new Promise((resolve) => {
-      const mediaRecorder = mediaRecorderRef.current;
-      
-      if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-        setIsRecording(false);
-        resolve(accumulatedTextRef.current || null);
-        return;
-      }
+    if (!isRecording) {
+      return accumulatedTextRef.current.trim() || null;
+    }
 
-      mediaRecorder.onstop = async () => {
-        setIsRecording(false);
-        setIsProcessing(true);
+    setIsProcessing(true);
 
-        try {
-          // Create audio blob from all chunks
-          const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-          
-          if (audioBlob.size >= 1000) {
-            const text = await transcribeAudio(audioBlob);
-            if (text && text.trim()) {
-              accumulatedTextRef.current = text.trim();
-            }
-          }
-          
+    if (modeRef.current === 'speech' && speechRecognitionRef.current) {
+      return new Promise((resolve) => {
+        stopResolveRef.current = resolve;
+        speechRecognitionRef.current?.stop();
+      });
+    }
+
+    if (modeRef.current === 'media' && mediaRecorderRef.current) {
+      return new Promise((resolve) => {
+        const recorder = mediaRecorderRef.current;
+        if (!recorder) {
+          setIsRecording(false);
           setIsProcessing(false);
-          const finalText = accumulatedTextRef.current || null;
-          setPartialText(finalText || '');
-          resolve(finalText);
-          
-        } catch (err) {
-          console.error('Audio processing error:', err);
-          setError('Failed to process audio');
-          setIsProcessing(false);
-          resolve(accumulatedTextRef.current || null);
+          resolve(accumulatedTextRef.current.trim() || null);
+          return;
         }
 
-        // Stop all tracks
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-      };
+        recorder.onstop = async () => {
+          setIsRecording(false);
+          modeRef.current = null;
+          const audioBlob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+          chunksRef.current = [];
 
-      mediaRecorder.stop();
-    });
+          const transcribed = audioBlob.size > 0
+            ? await transcribeWithEdgeFunction(audioBlob)
+            : null;
+
+          if (transcribed) {
+            accumulatedTextRef.current = transcribed;
+          }
+
+          setIsProcessing(false);
+          cleanupMediaStream();
+          resolve(accumulatedTextRef.current.trim() || null);
+        };
+
+        recorder.stop();
+      });
+    }
+
+    setIsProcessing(false);
+    setIsRecording(false);
+    return accumulatedTextRef.current.trim() || null;
+  }, [isRecording, transcribeWithEdgeFunction]);
+
+  useEffect(() => {
+    return () => {
+      cleanupMediaStream();
+      speechRecognitionRef.current?.abort();
+    };
   }, []);
 
   return {

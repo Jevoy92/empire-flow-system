@@ -44,11 +44,11 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
       setNewPassword('');
       setConfirmPassword('');
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({ 
         variant: 'destructive', 
         title: 'Failed to update password',
-        description: error.message 
+        description: error instanceof Error ? error.message : 'Unknown error'
       });
     } finally {
       setIsLoading(false);

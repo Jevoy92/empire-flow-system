@@ -33,7 +33,9 @@ export default function Onboarding() {
     await completeOnboarding();
     toast({
       title: 'Welcome aboard! 🎉',
-      description: `Your workspace is ready with ${templates.length} custom templates.`,
+      description: templates.length > 0
+        ? `Your workspace is ready with ${templates.length} custom templates.`
+        : 'Your workspace is ready and your first session is prepared.',
     });
     
     // If we have an approved template, go directly to a session with it
@@ -72,16 +74,16 @@ export default function Onboarding() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <div className="max-w-2xl mx-auto text-center">
+        <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-lg font-semibold text-foreground">Set Up Your Workspace</h1>
           <p className="text-sm text-muted-foreground">
-            Chat with our AI to create personalized focus templates
+            Answer 5 quick questions or use one voice dump, then approve everything before starting
           </p>
         </div>
       </div>
 
       {/* Chat */}
-      <div className="flex-1 max-w-2xl mx-auto w-full">
+      <div className="flex-1 max-w-5xl mx-auto w-full">
         <OnboardingChat 
           userId={user.id}
           userName={profile?.display_name || undefined}

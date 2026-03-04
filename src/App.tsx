@@ -14,6 +14,7 @@ import Index from "./pages/Index";
 import History from "./pages/History";
 import Workflows from "./pages/Workflows";
 import Session from "./pages/Session";
+import WorkflowReview from "./pages/WorkflowReview";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Settings from "./pages/Settings";
@@ -44,6 +45,9 @@ function AppRoutes() {
           <Route path="/projects" element={<Navigate to="/workflows" replace />} />
           <Route path="/session" element={
             <ProtectedRoute><Session /></ProtectedRoute>
+          } />
+          <Route path="/workflow-review" element={
+            <ProtectedRoute><WorkflowReview /></ProtectedRoute>
           } />
           <Route path="/auth" element={<Auth />} />
           <Route path="/onboarding" element={

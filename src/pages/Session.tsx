@@ -3,14 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { WorkSession } from '@/components/WorkSession';
 import { SystemShutdown } from '@/components/SystemShutdown';
 import { supabase } from '@/integrations/supabase/client';
-import { useSession, SessionConfig } from '@/contexts/SessionContext';
-import { Json } from '@/integrations/supabase/types';
+import { useSession, SessionConfig, Task as SessionTask } from '@/contexts/SessionContext';
+import { Json, TablesInsert } from '@/integrations/supabase/types';
 
-interface Task {
-  id: string;
-  text: string;
-  completed: boolean;
-}
+type Task = SessionTask;
 
 interface LocationState extends SessionConfig {
   projectId?: string;
@@ -72,7 +68,7 @@ export default function Session() {
       const { data: { user } } = await supabase.auth.getUser();
       
       // Create session in database with project link if provided
-      const sessionData: any = {
+      const sessionData: TablesInsert<'sessions'> = {
         user_id: user?.id,
         venture: config.venture,
         work_type: config.workType,
@@ -131,20 +127,24 @@ export default function Session() {
             .eq('id', state.projectId)
             .single();
 
-          if (project && Array.isArray(project.stages)) {
-            const stages = project.stages as any[];
-            stages[state.stageIndex] = { ...stages[state.stageIndex], completed: true };
-            
-            const nextStage = state.stageIndex + 1;
-            const isProjectComplete = nextStage >= stages.length;
+              if (project && Array.isArray(project.stages)) {
+                const stages = project.stages as Json[];
+                const updatedStages = stages.map((stage, index) => {
+                  if (index !== state.stageIndex) return stage;
+                  if (!stage || typeof stage !== 'object' || Array.isArray(stage)) return stage;
+                  return { ...stage, completed: true } as Json;
+                });
+                
+                const nextStage = state.stageIndex + 1;
+                const isProjectComplete = nextStage >= stages.length;
 
-            await supabase
-              .from('projects')
-              .update({
-                stages,
-                current_stage: isProjectComplete ? state.stageIndex : nextStage,
-                status: isProjectComplete ? 'completed' : 'active',
-                completed_at: isProjectComplete ? new Date().toISOString() : null,
+                await supabase
+                  .from('projects')
+                  .update({
+                    stages: updatedStages,
+                    current_stage: isProjectComplete ? state.stageIndex : nextStage,
+                    status: isProjectComplete ? 'completed' : 'active',
+                    completed_at: isProjectComplete ? new Date().toISOString() : null,
               })
               .eq('id', state.projectId);
           }

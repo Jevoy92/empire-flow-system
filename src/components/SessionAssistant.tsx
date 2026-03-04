@@ -7,15 +7,31 @@ import { z } from 'zod';
 // Schema validation for AI-generated task actions
 const TaskActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('add_tasks'), tasks: z.array(z.string().min(1).max(200)) }),
+  z.object({
+    type: z.literal('add_task_tree'),
+    tasks: z.array(
+      z.object({
+        text: z.string().min(1).max(200),
+        subtasks: z.array(z.string().min(1).max(200)).optional(),
+      })
+    ).min(1).max(12),
+  }),
   z.object({ type: z.literal('complete_tasks'), matches: z.array(z.string().min(1).max(200)) }),
   z.object({ type: z.literal('remove_tasks'), matches: z.array(z.string().min(1).max(200)) }),
   z.object({ type: z.literal('update_task'), match: z.string().min(1).max(200), newText: z.string().min(1).max(200) }),
+  z.object({ type: z.literal('set_task_timer'), match: z.string().min(1).max(200), minutes: z.number().min(1).max(300), autoStart: z.boolean().optional() }),
+  z.object({ type: z.literal('start_task_timers'), matches: z.array(z.string().min(1).max(200)).optional() }),
+  z.object({ type: z.literal('pause_task_timers'), matches: z.array(z.string().min(1).max(200)).optional() }),
 ]);
 
 interface Task {
   id: string;
   text: string;
   completed: boolean;
+  timerDurationSeconds?: number;
+  timerRemainingSeconds?: number;
+  timerStatus?: 'idle' | 'running' | 'paused' | 'done';
+  timerCompletedAt?: string | null;
 }
 
 interface Message {
@@ -39,19 +55,25 @@ interface SessionContext {
 }
 
 interface TaskAction {
-  type: 'add_tasks' | 'complete_tasks' | 'remove_tasks' | 'update_task';
-  tasks?: string[];
+  type: 'add_tasks' | 'add_task_tree' | 'complete_tasks' | 'remove_tasks' | 'update_task' | 'set_task_timer' | 'start_task_timers' | 'pause_task_timers';
+  tasks?: string[] | { text: string; subtasks?: string[] }[];
   matches?: string[];
   match?: string;
   newText?: string;
+  minutes?: number;
+  autoStart?: boolean;
 }
 
 interface SessionAssistantProps {
   sessionContext: SessionContext;
   onAddTasks: (tasks: string[]) => void;
+  onAddTaskTree: (tasks: { text: string; subtasks?: string[] }[]) => void;
   onCompleteTasks: (matches: string[]) => void;
   onRemoveTasks: (matches: string[]) => void;
   onUpdateTask: (match: string, newText: string) => void;
+  onSetTaskTimer: (match: string, minutes: number, autoStart?: boolean) => void;
+  onStartTaskTimers: (matches?: string[]) => void;
+  onPauseTaskTimers: (matches?: string[]) => void;
 }
 
 const quickActions = [
@@ -62,9 +84,13 @@ const quickActions = [
 export function SessionAssistant({
   sessionContext,
   onAddTasks,
+  onAddTaskTree,
   onCompleteTasks,
   onRemoveTasks,
   onUpdateTask,
+  onSetTaskTimer,
+  onStartTaskTimers,
+  onPauseTaskTimers,
 }: SessionAssistantProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -87,46 +113,137 @@ export function SessionAssistant({
     }
   }, [messages, isExpanded]);
 
-  const parseAndExecuteActions = (content: string) => {
-    const actionRegex = /\[ACTION\](.*?)\[\/ACTION\]/g;
-    let match;
-    
-    while ((match = actionRegex.exec(content)) !== null) {
+  const cleanMessageContent = (content: string) => {
+    return content
+      .replace(/\[ACTION\][\s\S]*?\[\/ACTION\]/gi, '')
+      .replace(/```action[\s\S]*?```/gi, '')
+      .replace(/```json[\s\S]*?```/gi, '')
+      .trim();
+  };
+
+  const extractActionPayloads = (content: string): string[] => {
+    const payloads: string[] = [];
+    const actionBlockRegex = /\[ACTION\]([\s\S]*?)\[\/ACTION\]/gi;
+    let blockMatch: RegExpExecArray | null;
+
+    while ((blockMatch = actionBlockRegex.exec(content)) !== null) {
+      const rawPayload = blockMatch[1]?.trim();
+      if (rawPayload) payloads.push(rawPayload);
+    }
+
+    const codeBlockRegex = /```action\s*([\s\S]*?)```/gi;
+    let codeMatch: RegExpExecArray | null;
+
+    while ((codeMatch = codeBlockRegex.exec(content)) !== null) {
+      const rawPayload = codeMatch[1]?.trim();
+      if (rawPayload) payloads.push(rawPayload);
+    }
+
+    const jsonBlockRegex = /```json\s*([\s\S]*?)```/gi;
+    let jsonMatch: RegExpExecArray | null;
+
+    while ((jsonMatch = jsonBlockRegex.exec(content)) !== null) {
+      const rawPayload = jsonMatch[1]?.trim();
+      if (rawPayload && rawPayload.includes('"type"')) payloads.push(rawPayload);
+    }
+
+    return payloads;
+  };
+
+  const parseLocalTaskList = (message: string): string[] => {
+    const normalized = message
+      .replace(/\r/g, '\n')
+      .replace(/\b(can you|please|could you)\b/gi, '')
+      .replace(/\b(add|create|make|build)\b/gi, '')
+      .replace(/\b(task|tasks|todo|to-do|list|checklist)\b/gi, '')
+      .replace(/^[\s:,-]+/, '')
+      .trim();
+
+    if (!normalized) return [];
+
+    const lines = normalized
+      .split(/\n+/)
+      .map((line) => line.replace(/^[-*•\d.)\s]+/, '').trim())
+      .filter(Boolean);
+
+    const source = lines.length > 1 ? lines : [normalized];
+    const pieces = source
+      .flatMap((line) => line.split(/\s*(?:,|;|\band\b|\bthen\b)\s+/i))
+      .map((item) => item.replace(/^to\s+/i, '').trim())
+      .filter((item) => item.length > 2);
+
+    const unique = Array.from(new Set(pieces));
+    return unique.slice(0, 12);
+  };
+
+  const generateFallbackSubtasks = (task: string): string[] => {
+    const clean = task.trim();
+    return [
+      `Define success criteria for ${clean}`,
+      `Execute ${clean}`,
+      `Review and finalize ${clean}`,
+    ];
+  };
+
+  const parseAndExecuteActions = (content: string): number => {
+    const payloads = extractActionPayloads(content);
+    let actionsExecuted = 0;
+
+    payloads.forEach((payload) => {
       try {
-        const parsed = JSON.parse(match[1]);
+        const parsed = JSON.parse(payload) as TaskAction;
         const action = TaskActionSchema.parse(parsed);
-        
+
         switch (action.type) {
           case 'add_tasks':
             if (action.tasks && action.tasks.length > 0) {
               onAddTasks(action.tasks);
+              actionsExecuted += 1;
+            }
+            break;
+          case 'add_task_tree':
+            if (action.tasks && action.tasks.length > 0) {
+              onAddTaskTree(action.tasks);
+              actionsExecuted += 1;
             }
             break;
           case 'complete_tasks':
             if (action.matches && action.matches.length > 0) {
               onCompleteTasks(action.matches);
+              actionsExecuted += 1;
             }
             break;
           case 'remove_tasks':
             if (action.matches && action.matches.length > 0) {
               onRemoveTasks(action.matches);
+              actionsExecuted += 1;
             }
             break;
           case 'update_task':
             if (action.match && action.newText) {
               onUpdateTask(action.match, action.newText);
+              actionsExecuted += 1;
             }
+            break;
+          case 'set_task_timer':
+            onSetTaskTimer(action.match, action.minutes, action.autoStart);
+            actionsExecuted += 1;
+            break;
+          case 'start_task_timers':
+            onStartTaskTimers(action.matches);
+            actionsExecuted += 1;
+            break;
+          case 'pause_task_timers':
+            onPauseTaskTimers(action.matches);
+            actionsExecuted += 1;
             break;
         }
       } catch (e) {
         console.error('Failed to parse/validate action:', e);
-        // Don't execute invalid actions
       }
-    }
-  };
+    });
 
-  const cleanMessageContent = (content: string) => {
-    return content.replace(/\[ACTION\].*?\[\/ACTION\]/g, '').trim();
+    return actionsExecuted;
   };
 
   const sendMessage = async (messageText?: string) => {
@@ -207,8 +324,48 @@ export function SessionAssistant({
         }
       }
 
-      // Parse and execute any actions in the full response
-      parseAndExecuteActions(assistantContent);
+      // Parse and execute any actions in the full response.
+      const actionCount = parseAndExecuteActions(assistantContent);
+
+      // Local fallback: if the model response didn't include valid actions but user clearly gave a list intent,
+      // parse natural language into tasks so the workflow still works reliably.
+      if (actionCount === 0) {
+        const userRequestedTaskList =
+          /\b(add|create|make|build|generate|plan|break)\b/i.test(textToSend) &&
+          (
+            /\b(task|tasks|todo|to-do|list|checklist)\b/i.test(textToSend) ||
+            /[,;\n]/.test(textToSend) ||
+            /\band\b/i.test(textToSend)
+          );
+
+        if (userRequestedTaskList) {
+          const inferredTasks = parseLocalTaskList(textToSend);
+          if (inferredTasks.length > 0) {
+            const userRequestedBreakdown = /\b(subtask|subtasks|breakdown|plan|steps?)\b/i.test(textToSend);
+            if (userRequestedBreakdown) {
+              onAddTaskTree(
+                inferredTasks.map((task) => ({
+                  text: task,
+                  subtasks: generateFallbackSubtasks(task),
+                }))
+              );
+            } else {
+              onAddTasks(inferredTasks);
+            }
+            setMessages((prev) => {
+              const updated = [...prev];
+              const finalAssistant = updated[updated.length - 1];
+              if (finalAssistant && finalAssistant.role === 'assistant') {
+                updated[updated.length - 1] = {
+                  role: 'assistant',
+                  content: `${finalAssistant.content || 'Done.'} Added ${inferredTasks.length} task${inferredTasks.length === 1 ? '' : 's'}${userRequestedBreakdown ? ' with subtasks' : ''}.`,
+                };
+              }
+              return updated;
+            });
+          }
+        }
+      }
     } catch (error) {
       console.error('Session assistant error:', error);
       setMessages(prev => [

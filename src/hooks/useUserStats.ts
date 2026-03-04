@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/hooks/useAuth';
 import { UserStats, achievements, isAchievementUnlocked } from '@/data/achievements';
 
@@ -139,7 +140,7 @@ export function useUserStats() {
           filter: `id=eq.${user.id}`,
         },
         (payload) => {
-          const data = payload.new as any;
+          const data = payload.new as Tables<'user_stats'>;
           setStats({
             total_sessions_completed: data.total_sessions_completed,
             total_tasks_completed: data.total_tasks_completed,
