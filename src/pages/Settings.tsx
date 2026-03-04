@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/sheet';
 import AchievementsPanel from '@/components/AchievementsPanel';
 import StatDetailSheet from '@/components/StatDetailSheet';
+import { InsightsPanel } from '@/components/settings/InsightsPanel';
 import { AvatarPicker } from '@/components/AvatarPicker';
 import { ChangePasswordModal } from '@/components/ChangePasswordModal';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
@@ -460,6 +461,9 @@ export default function Settings() {
                 </div>
               </SheetContent>
             </Sheet>
+
+            {/* Insights: Today's Activity + Notes */}
+            <InsightsPanel />
           </motion.div>
 
           <motion.div className="xl:col-span-5 xl:sticky xl:top-24 h-fit space-y-6" {...reveal(0.2)}>
