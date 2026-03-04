@@ -25,7 +25,7 @@ export function ProjectPreviewCard({ project, isApproved, onApprove }: ProjectPr
   return (
     <div className={`rounded-xl border transition-all animate-message-in ${
       isApproved 
-        ? 'border-green-500/30 bg-green-500/5' 
+        ? 'border-[hsl(var(--status-active)/0.3)] bg-[hsl(var(--status-active)/0.05)]' 
         : 'border-primary/20 bg-card hover:border-primary/40'
     }`}>
       {/* Header */}
@@ -41,7 +41,7 @@ export function ProjectPreviewCard({ project, isApproved, onApprove }: ProjectPr
             </div>
           </div>
           {isApproved ? (
-            <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
+            <div className="flex items-center gap-1 text-[hsl(var(--status-active))] text-xs font-medium">
               <Check className="w-4 h-4" />
               Saved
             </div>

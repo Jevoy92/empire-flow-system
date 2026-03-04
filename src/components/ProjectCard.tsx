@@ -135,7 +135,7 @@ export function ProjectCard({ project, onContinue, onRefresh, defaultExpanded, i
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-foreground truncate">{project.name}</h3>
               {isPaused && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600">Paused</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-[hsl(var(--status-warning)/0.2)] text-[hsl(var(--status-warning))]">Paused</span>
               )}
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -226,7 +226,7 @@ export function ProjectCard({ project, onContinue, onRefresh, defaultExpanded, i
                       isCurrent 
                         ? `${stageColor.light} border-2 border-current ${stageColor.text}` 
                         : isComplete 
-                          ? 'bg-green-500/10 border border-green-500/30' 
+                          ? 'bg-[hsl(var(--status-active)/0.1)] border border-[hsl(var(--status-active)/0.3)]' 
                           : 'bg-secondary/30 border border-border/50'
                     }`}
                   >
@@ -241,7 +241,7 @@ export function ProjectCard({ project, onContinue, onRefresh, defaultExpanded, i
                       {/* Status indicator */}
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
                         isComplete 
-                          ? 'bg-green-500 text-white' 
+                          ? 'bg-[hsl(var(--status-active))] text-white' 
                           : isCurrent 
                             ? `${stageColor.bg} text-white` 
                             : 'bg-muted text-muted-foreground'
@@ -259,10 +259,10 @@ export function ProjectCard({ project, onContinue, onRefresh, defaultExpanded, i
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <ListChecks className={`w-4 h-4 ${
-                            isComplete ? 'text-green-600' : isCurrent ? stageColor.text : 'text-muted-foreground'
+                            isComplete ? 'text-[hsl(var(--status-active))]' : isCurrent ? stageColor.text : 'text-muted-foreground'
                           }`} />
                           <p className={`font-medium truncate ${
-                            isComplete ? 'text-green-600' : isCurrent ? stageColor.text : 'text-muted-foreground'
+                            isComplete ? 'text-[hsl(var(--status-active))]' : isCurrent ? stageColor.text : 'text-muted-foreground'
                           }`}>
                             {stage.name}
                           </p>
@@ -311,12 +311,12 @@ export function ProjectCard({ project, onContinue, onRefresh, defaultExpanded, i
                               key={task.id || taskIdx}
                               className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
                                 task.completed 
-                                  ? 'bg-green-500/10 text-green-600' 
+                                  ? 'bg-[hsl(var(--status-active)/0.1)] text-[hsl(var(--status-active))]' 
                                   : 'bg-secondary/20 text-foreground'
                               }`}
                             >
                               {task.completed ? (
-                                <CheckCircle2 className="w-4 h-4 shrink-0 text-green-500" />
+                                <CheckCircle2 className="w-4 h-4 shrink-0 text-[hsl(var(--status-active))]" />
                               ) : (
                                 <Circle className="w-4 h-4 shrink-0 text-muted-foreground" />
                               )}
@@ -373,7 +373,7 @@ export function ProjectCard({ project, onContinue, onRefresh, defaultExpanded, i
           </div>
 
           {isCompleted && (
-            <div className="flex items-center justify-center gap-2 py-3 text-green-600 bg-green-500/10 rounded-lg mt-2">
+            <div className="flex items-center justify-center gap-2 py-3 text-[hsl(var(--status-active))] bg-[hsl(var(--status-active)/0.1)] rounded-lg mt-2">
               <Check className="w-5 h-5" />
               <span className="font-medium">Project Complete</span>
             </div>
