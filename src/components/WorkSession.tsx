@@ -304,11 +304,16 @@ export function WorkSession({ venture, workType, focus, completionCondition, ini
     previousRemainingRef.current = next;
   }, [tasks, toast]);
 
-  // Notify parent and context of task changes
+  // Notify parent and context of task changes (debounced to avoid infinite loop)
+  const tasksSerialized = JSON.stringify(tasks);
+  const prevTasksSerialized = useRef(tasksSerialized);
   useEffect(() => {
+    if (prevTasksSerialized.current === tasksSerialized) return;
+    prevTasksSerialized.current = tasksSerialized;
     onTasksChange?.(tasks);
     setContextTasks(tasks);
-  }, [tasks, onTasksChange, setContextTasks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasksSerialized]);
 
   const toggleTask = (id: string) => {
     const task = tasks.find(t => t.id === id);
