@@ -370,7 +370,7 @@ export type Database = {
           last_used_at: string | null
           name: string
           use_ai_tasks: boolean
-          user_id: string | null
+          user_id: string
           venture: string
           work_type: string
         }
@@ -383,7 +383,7 @@ export type Database = {
           last_used_at?: string | null
           name: string
           use_ai_tasks?: boolean
-          user_id?: string | null
+          user_id: string
           venture: string
           work_type: string
         }
@@ -396,7 +396,7 @@ export type Database = {
           last_used_at?: string | null
           name?: string
           use_ai_tasks?: boolean
-          user_id?: string | null
+          user_id?: string
           venture?: string
           work_type?: string
         }
