@@ -30,8 +30,7 @@ export function AIThoughtBubble() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  if (loading && !thought) return null;
-  if (!thought) return null;
+  if (!thought && !loading) return null;
 
   return (
     <motion.div
