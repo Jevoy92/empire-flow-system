@@ -41,7 +41,7 @@ serve(async (req) => {
     ]);
 
     const sessions = sessionsRes.data ?? [];
-    const projects = (projectsRes as any).data ?? [];
+    const projects = projectsRes.data ?? [];
     const lifelogs = lifelogsRes.data ?? [];
     const pending = (insightsRes.data?.recent_context as any)?.pending_items ?? [];
     const notes = notesRes.data ?? [];
