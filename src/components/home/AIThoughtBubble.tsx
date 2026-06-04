@@ -48,7 +48,14 @@ export function AIThoughtBubble() {
             <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
               On my mind
             </div>
-            <p className="text-sm text-foreground leading-relaxed">{thought}</p>
+            {thought ? (
+              <p className="text-sm text-foreground leading-relaxed">{thought}</p>
+            ) : (
+              <div className="space-y-1.5 py-0.5">
+                <div className="h-3 w-11/12 rounded bg-muted/60 animate-pulse" />
+                <div className="h-3 w-2/3 rounded bg-muted/60 animate-pulse" />
+              </div>
+            )}
           </div>
         </div>
         <button
