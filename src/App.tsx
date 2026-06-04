@@ -11,6 +11,7 @@ import { Navigation } from "@/components/Navigation";
 import { MiniSession } from "@/components/MiniSession";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
+import { ScrollToTop } from "@/components/ScrollToTop";
 import Index from "./pages/Index";
 import History from "./pages/History";
 import Workflows from "./pages/Workflows";
@@ -30,6 +31,7 @@ function AppRoutes() {
   
   const routes = (
     <LayoutGroup id="app-layout">
+      <ScrollToTop />
       <Navigation />
       <MiniSession />
       {isDemo && <DemoBanner />}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Layers, Plus, FolderOpen, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
+import { Layers, Plus, FolderOpen, Sparkles, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ProjectCreateModal } from '@/components/ProjectCreateModal';
 import { ProjectCard } from '@/components/ProjectCard';
@@ -276,12 +276,21 @@ export default function Workflows() {
     <motion.div className="min-h-screen page-shell p-6" {...reveal()}>
       <motion.div className="max-w-7xl mx-auto space-y-6" {...reveal(0.04)}>
         <motion.div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between" {...reveal(0.08)}>
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-              <Layers className="w-6 h-6" />
-              Workflows
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">Every workflow runs in stages, not isolated one-offs.</p>
+          <div className="flex items-start gap-3">
+            <button
+              onClick={() => navigate('/' + (location.search.includes('demo=1') ? '?demo=1' : ''))}
+              className="p-2 rounded-lg hover:bg-muted transition-colors mt-1"
+              aria-label="Back to home"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+                <Layers className="w-6 h-6" />
+                Workflows
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">Every workflow runs in stages, not isolated one-offs.</p>
+            </div>
           </div>
           <button onClick={() => setShowProjectModal(true)} className="btn-primary flex items-center gap-2 shrink-0">
             <Plus className="w-4 h-4" />
