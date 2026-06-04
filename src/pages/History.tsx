@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
-import { Clock, CheckCircle, XCircle, Play, Eye, Circle, Timer, ListChecks, RotateCcw } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Play, Eye, Circle, Timer, ListChecks, RotateCcw, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDemo } from '@/contexts/DemoContext';
 import { useSession } from '@/contexts/SessionContext';
@@ -265,9 +265,16 @@ export default function History() {
   return (
     <motion.div className="min-h-screen page-shell p-6 bg-background" {...reveal()}>
       <motion.div className="max-w-6xl mx-auto" {...reveal(0.04)}>
-        <motion.h1 className="text-2xl font-semibold mb-6" {...reveal(0.08)}>
-          History
-        </motion.h1>
+        <motion.div className="flex items-center gap-3 mb-6" {...reveal(0.08)}>
+          <button
+            onClick={() => navigate('/' + demoSuffix)}
+            className="p-2 rounded-lg hover:bg-muted transition-colors"
+            aria-label="Back to home"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h1 className="text-2xl font-semibold">History</h1>
+        </motion.div>
 
         {sessions.length === 0 ? (
           <motion.div className="card-elevated p-8 text-center" {...reveal(0.12)}>
