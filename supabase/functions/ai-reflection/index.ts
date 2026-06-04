@@ -32,7 +32,7 @@ serve(async (req) => {
       supabase.from("sessions").select("focus,venture,status,duration_minutes,created_at")
         .eq("user_id", user.id).gte("created_at", since7d).order("created_at", { ascending: false }).limit(8),
       supabase.from("projects").select("name,venture,current_stage,stages,status")
-        .eq("user_id", user.id).neq("status", "completed").order("updated_at", { ascending: false }).limit: 5 as any,
+        .eq("user_id", user.id).neq("status", "completed").order("updated_at", { ascending: false }).limit(5),
       supabase.from("limitless_lifelogs").select("title,summary,started_at")
         .eq("user_id", user.id).gte("started_at", since24h).order("started_at", { ascending: false }).limit(6),
       supabase.from("ai_user_insights").select("recent_context").eq("user_id", user.id).maybeSingle(),
