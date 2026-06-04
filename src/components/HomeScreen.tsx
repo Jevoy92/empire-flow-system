@@ -9,6 +9,7 @@ import { useDemo } from '@/contexts/DemoContext';
 import { buildWorkflowDraftFromInput, buildWorkflowDraftFromTemplate } from '@/lib/workflow-planner';
 import { motion, useReducedMotion } from 'framer-motion';
 import { HomeSuggestionCards } from './home/HomeSuggestionCards';
+import { AIThoughtBubble } from './home/AIThoughtBubble';
 import { ProjectStageData, SmartSuggestion, Template } from './home/types';
 import { useHomeData } from '@/hooks/useHomeData';
 
@@ -265,8 +266,9 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
           </div>
         </motion.div>
 
-        {/* Suggestion cards */}
+        {/* AI thought bubble + Suggestion cards */}
         <motion.div className="w-full mb-8" {...reveal(0.24)}>
+          {!isDemo && <AIThoughtBubble />}
           <HomeSuggestionCards
             suggestions={suggestions}
             allSuggestionCount={allSuggestions.length}

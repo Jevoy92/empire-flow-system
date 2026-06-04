@@ -26,3 +26,7 @@ verify_jwt = false
 
 [functions.limitless-sync]
 verify_jwt = false
+
+[functions.ai-reflection]
+verify_jwt = false
+
