@@ -115,6 +115,87 @@ export type Database = {
           },
         ]
       }
+      limitless_lifelogs: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          lifelog_id: string
+          raw: Json | null
+          speakers: Json | null
+          started_at: string | null
+          summary: string | null
+          synced_at: string
+          title: string | null
+          transcript: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          lifelog_id: string
+          raw?: Json | null
+          speakers?: Json | null
+          started_at?: string | null
+          summary?: string | null
+          synced_at?: string
+          title?: string | null
+          transcript?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          lifelog_id?: string
+          raw?: Json | null
+          speakers?: Json | null
+          started_at?: string | null
+          summary?: string | null
+          synced_at?: string
+          title?: string | null
+          transcript?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      limitless_sync_state: {
+        Row: {
+          created_at: string
+          last_cursor: string | null
+          last_error: string | null
+          last_status: string | null
+          last_synced_at: string | null
+          lifelog_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          last_cursor?: string | null
+          last_error?: string | null
+          last_status?: string | null
+          last_synced_at?: string | null
+          lifelog_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          last_cursor?: string | null
+          last_error?: string | null
+          last_status?: string | null
+          last_synced_at?: string | null
+          lifelog_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
