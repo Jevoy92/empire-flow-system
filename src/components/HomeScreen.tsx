@@ -266,8 +266,9 @@ export function HomeScreen({ onStartSession }: HomeScreenProps) {
           </div>
         </motion.div>
 
-        {/* Suggestion cards */}
+        {/* AI thought bubble + Suggestion cards */}
         <motion.div className="w-full mb-8" {...reveal(0.24)}>
+          {!isDemo && <AIThoughtBubble />}
           <HomeSuggestionCards
             suggestions={suggestions}
             allSuggestionCount={allSuggestions.length}
