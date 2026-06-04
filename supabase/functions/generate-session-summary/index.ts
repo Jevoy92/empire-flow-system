@@ -114,7 +114,7 @@ Extract and return as JSON:
           { role: "system", content: "You analyze work sessions and extract actionable insights. Always respond with valid JSON." },
           { role: "user", content: analysisPrompt },
         ],
-        max_tokens: 300,
+        max_completion_tokens: 300,
       }),
     });
 
