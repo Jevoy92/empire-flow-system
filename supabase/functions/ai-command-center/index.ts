@@ -88,6 +88,7 @@ serve(async (req) => {
     let userId: string | null = null;
     let recentConversations: ConversationRecord[] = [];
     let userInsights: UserInsights | null = null;
+    let recentLifelogs: Array<{ title: string | null; summary: string | null; started_at: string | null }> = [];
 
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
@@ -114,6 +115,17 @@ serve(async (req) => {
           .single();
 
         userInsights = insights;
+
+        // Fetch recent Limitless lifelogs (last 24h)
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: lifelogs } = await supabase
+          .from('limitless_lifelogs')
+          .select('title, summary, started_at')
+          .eq('user_id', userId)
+          .gte('started_at', since)
+          .order('started_at', { ascending: false })
+          .limit(10);
+        recentLifelogs = lifelogs || [];
       }
     }
 
@@ -130,11 +142,16 @@ serve(async (req) => {
       ? JSON.stringify(userInsights.recent_context.pending_items)
       : 'No pending follow-ups';
 
+    const lifelogsText = recentLifelogs.length > 0
+      ? recentLifelogs.map(l => `- ${l.started_at ?? ''} ${l.title ?? 'Untitled'}: ${(l.summary ?? '').slice(0, 200)}`).join('\n')
+      : 'No recent Limitless lifelogs';
+
     const systemPrompt = SYSTEM_PROMPT
       .replace('{currentPage}', context?.currentPage || '/')
       .replace('{recentHistory}', recentHistoryText)
       .replace('{userPreferences}', preferencesText)
-      .replace('{pendingFollowups}', followupsText);
+      .replace('{pendingFollowups}', followupsText)
+      + `\n\nRECENT LIMITLESS LIFELOGS (last 24h, from user's pendant transcripts — use as real-world context for what they've been discussing):\n${lifelogsText}`;
 
     const messages = [
       { role: "system", content: systemPrompt },

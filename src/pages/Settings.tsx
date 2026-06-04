@@ -27,6 +27,7 @@ import {
 import AchievementsPanel from '@/components/AchievementsPanel';
 import StatDetailSheet from '@/components/StatDetailSheet';
 import { InsightsPanel } from '@/components/settings/InsightsPanel';
+import { LimitlessPanel } from '@/components/settings/LimitlessPanel';
 import { AvatarPicker } from '@/components/AvatarPicker';
 import { ChangePasswordModal } from '@/components/ChangePasswordModal';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
@@ -464,6 +465,9 @@ export default function Settings() {
 
             {/* Insights: Today's Activity + Notes */}
             <InsightsPanel />
+
+            {/* Limitless integration */}
+            <LimitlessPanel />
           </motion.div>
 
           <motion.div className="xl:col-span-5 xl:sticky xl:top-24 h-fit space-y-6" {...reveal(0.2)}>
